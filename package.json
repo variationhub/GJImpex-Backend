@@ -1,0 +1,19 @@
+{
+  "name": "y",
+  "version": "1.0.0",
+  "description": "client based CRM management application build using react native",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/variationhub/GJImpex-Backend.git"
+  },
+  "author": "variationhub",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/variationhub/GJImpex-Backend/issues"
+  },
+  "homepage": "https://github.com/variationhub/GJImpex-Backend#readme"
+}
