@@ -25,7 +25,10 @@ const login = async (req, res) => {
                 phone: user.phone,
                 role: user.role,
             },
-            process.env.SECRET
+            process.env.SECRET,
+            {
+                expiresIn: "24h",
+            }
         );
 
         res.json({ token });

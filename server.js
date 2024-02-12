@@ -20,6 +20,7 @@ mongoose.connect(process.env.MONGODB_URL_LOCAL).then((connection) => {
     console.error(err)
 })
 
+
 app.use('/api/login', loginRoute);
 app.use('/api/users', userRoute);
 app.use('/api/products', productRoute);
