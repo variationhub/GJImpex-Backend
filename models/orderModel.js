@@ -25,6 +25,10 @@ const orderSchema = new mongoose.Schema(
                 message: 'Name must contain one space between party name and city.',
             },
         },
+        transport: {
+            type: String,
+            trim: true
+        },
         orders: [orderProductSchema],
         LR: {
             type: Boolean,
@@ -51,6 +55,14 @@ const orderSchema = new mongoose.Schema(
         orderChanged: {
             type: Boolean,
             default: false,
+        },
+        totalPrice:{
+            type: Number,
+            default: 0
+        },
+        gstPrice:{
+            type: Number,
+            default: 0
         },
         createdDate: {
             type: Date,

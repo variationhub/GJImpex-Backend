@@ -4,11 +4,23 @@ const Order = require('../models/orderModel');
 const createOrder = async (req, res) => {
   try {
     const orderData = req.body;
-    const order = await Order.create(orderData);
-    res.status(201).json(order);
+
+    const total = req.body.orders.reduce((acc , curr) => {
+      return acc + curr.quantity * curr.sellPrice;
+    },0);
+    
+    const order = await Order.create({...orderData, totalPrice: total});
+    res.json({
+      status:200,
+      data:order,
+      message:"Order created successfully"
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error creating order' });
+    res.status(500).json({
+      status:false,
+      data:null,
+      message:error.message
+    });
   }
 };
 
@@ -17,10 +29,17 @@ const updateOrder = async (req, res) => {
   const orderId = req.params.id;
   try {
     const updatedOrder = await Order.findByIdAndUpdate(orderId, req.body, { new: true });
-    res.json(updatedOrder);
+    res.json({
+      status:true,
+      data:updatedOrder,
+      message:"Order updated successfully"
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error updating order' });
+    res.status(500).json({
+      status:false,
+      data:null,
+      message:error.message
+    });
   }
 };
 
@@ -28,10 +47,17 @@ const updateOrder = async (req, res) => {
 const getAllOrders = async (req, res) => {
   try {
     const orders = await Order.find();
-    res.json(orders);
+    res.json({
+      status: true,
+      data: orders,
+      message: "Orders fetch successfully"
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error fetching orders' });
+    res.status(500).json({
+      status: false,
+      data: null,
+      message: 'Error fetching orders'
+    });
   }
 };
 
@@ -41,12 +67,23 @@ const getOrderById = async (req, res) => {
   try {
     const order = await Order.findById(orderId);
     if (!order) {
-      return res.status(404).json({ error: 'Order not found' });
+      return res.status(404).json({
+        status: false,
+        data: null,
+        message: "Order not found"
+      });
     }
-    res.json(order);
+    res.json({
+      status: true,
+      data: order,
+      message: "Order found successfully"
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error fetching order' });
+    res.status(500).json({
+      status: false,
+      data: null,
+      message: 'Error fetching order'
+    });
   }
 };
 
@@ -54,10 +91,17 @@ const filterOrdersByStatus = async (req, res) => {
     try {
       const { status } = req.params;
       const filteredOrders = await Order.find({ status });
-      res.json(filteredOrders);
+      res.json({
+        status: true,
+        data: filteredOrders,
+        message: "Orders fetched successfully"
+      });
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Error filtering Orders by status' });
+      res.status(500).json({
+        status: false,
+        data: null,
+        message: 'Error fetching orders'
+      });
     }
   };
 
@@ -67,12 +111,23 @@ const deleteOrder = async (req, res) => {
   try {
     const deletedOrder = await Order.findByIdAndDelete(orderId);
     if (!deletedOrder) {
-      return res.status(404).json({ error: 'Order not found' });
+      return res.status(404).json({
+        status: false,
+        data: null,
+        message: "Order not found"
+      });
     }
-    res.json(deletedOrder);
+    res.json({
+      status: true,
+      data: deletedOrder,
+      message: "Order deleted successfully"
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error deleting order' });
+    res.status(500).json({
+      status: false,
+      data: null,
+      message: 'Error deleting order'
+    });
   }
 };
 
