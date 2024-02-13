@@ -56,11 +56,11 @@ const orderSchema = new mongoose.Schema(
             type: Boolean,
             default: false,
         },
-        totalPrice:{
+        totalPrice: {
             type: Number,
             default: 0
         },
-        gstPrice:{
+        gstPrice: {
             type: Number,
             default: 0
         },
@@ -83,6 +83,11 @@ orderSchema.pre("save", function (next) {
     if (!this.createdDate) {
         this.createdDate = currentDate;
     }
+    next();
+});
+
+orderSchema.pre('findOneAndUpdate', function (next) {
+    this.set({ orderChanged: true, lastUpdatedDate: new Date() });
     next();
 });
 
