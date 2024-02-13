@@ -5,12 +5,13 @@ const Product = require('../models/productModel');
 const createOrder = async (req, res) => {
   try {
     const orderData = req.body;
+    const userId = req.user._id;
 
     const total = req.body.orders.reduce((acc, curr) => {
       return Number(acc) + (Number(curr.quantity) * Number(curr.sellPrice));
-    }, Number(Number(req.body.gstPrice)/Number(req.body.gst)).toFixed(0));
+    }, Number(Number(orderData.gstPrice)/Number(orderData.gst)).toFixed(0));
 
-    const order = await Order.create({ ...orderData, totalPrice: total });
+    const order = await Order.create({ ...orderData, userId, totalPrice: total });
 
     await Promise.all(orderData.orders.map(async (orderItem) => {
       const product = await Product.findOne({ name: orderItem.productName });
@@ -22,7 +23,7 @@ const createOrder = async (req, res) => {
     }));
 
     res.json({
-      status: 200,
+      status: true,
       data: order,
       message: "Order created successfully"
     });
