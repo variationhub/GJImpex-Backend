@@ -7,8 +7,8 @@ const createOrder = async (req, res) => {
     const orderData = req.body;
 
     const total = req.body.orders.reduce((acc, curr) => {
-      return acc + curr.quantity * curr.sellPrice;
-    }, 0);
+      return Number(acc) + (Number(curr.quantity) * Number(curr.sellPrice));
+    }, Number(Number(req.body.gstPrice)/Number(req.body.gst)).toFixed(0));
 
     const order = await Order.create({ ...orderData, totalPrice: total });
 

@@ -60,6 +60,10 @@ const orderSchema = new mongoose.Schema(
             type: Number,
             default: 0
         },
+        gst:{
+            type: Number,
+            default: 0
+        },
         gstPrice: {
             type: Number,
             default: 0
