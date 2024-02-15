@@ -7,7 +7,8 @@ const {
     getAllOrders,
     getOrderById,
     filterOrdersByStatus,
-    deleteOrder
+    deleteOrder,
+    updateOrderStatus
 } = require('../controllers/orderController');
 
 router.use(verifyToken);
@@ -17,6 +18,7 @@ router.get('/:id', getOrderById);
 router.get('/filter/:status', filterOrdersByStatus);
 router.post('/', createOrder);
 router.put('/:id', updateOrder);
+router.put('/:id/status', updateOrderStatus);
 router.delete('/:id', deleteOrder);
 
 module.exports = router;
