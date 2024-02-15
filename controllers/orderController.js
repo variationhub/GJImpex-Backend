@@ -9,7 +9,7 @@ const createOrder = async (req, res) => {
 
     const total = req.body.orders.reduce((acc, curr) => {
       return Number(acc) + (Number(curr.quantity) * Number(curr.sellPrice));
-    }, Number(Number(orderData.gstPrice)/Number(orderData.gst)).toFixed(0));
+    }, Number(Number(orderData.gstPrice) / Number(orderData.gst)).toFixed(0));
 
     const order = await Order.create({ ...orderData, userId, totalPrice: total });
 
@@ -68,6 +68,62 @@ const updateOrder = async (req, res) => {
       status: true,
       data: updatedOrder,
       message: "Order updated successfully"
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      status: false,
+      data: null,
+      message: error.message
+    });
+  }
+};
+
+const updateOrderStatus = async (req, res) => {
+  const orderId = req.params.id;
+  const { billed, dispatched, LR } = req.query;
+
+  try {
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({
+        status: false,
+        data: null,
+        message: "Order not found"
+      });
+    }
+
+    // Update order status based on provided query parameters
+    if (billed !== undefined) {
+      order.billed = billed === 'true';
+    }
+    if (dispatched !== undefined) {
+      order.dispatched = dispatched === 'true';
+    }
+    if (LR !== undefined) {
+      order.LR = LR === 'true';
+    }
+
+    let newStatus = "pending";
+
+    if (order.billed || order.dispatched) {
+      newStatus = "dispatching and billing";
+      if (order.billed && order.dispatched) {
+        newStatus = "LR pending";
+        if (order.LR) {
+          newStatus = "done";
+        }
+      }
+    }
+
+    order.status = newStatus;
+    await order.save();
+
+    res.json({
+      status: true,
+      data: order,
+      message: "Order status updated"
     });
 
   } catch (error) {
@@ -175,4 +231,5 @@ module.exports = {
   getOrderById,
   filterOrdersByStatus,
   deleteOrder,
+  updateOrderStatus
 };
