@@ -14,7 +14,7 @@ const createOrder = async (req, res) => {
     const order = await Order.create({ ...orderData, userId, totalPrice: total });
 
     await Promise.all(orderData.orders.map(async (orderItem) => {
-      const product = await Product.findOne({ name: orderItem.productName });
+      const product = await Product.findOne({ productName: orderItem.productName });
       if (!product) {
         throw new Error(`Product with ID ${orderItem.productName} not found.`);
       }
@@ -56,7 +56,7 @@ const updateOrder = async (req, res) => {
     const updatedOrder = await Order.findByIdAndUpdate(orderId, req.body, { new: true });
 
     await Promise.all(Object.keys(quantityChanges).map(async (productName) => {
-      const product = await Product.findOne({ name: productName });
+      const product = await Product.findOne({ productName: productName });
       if (!product) {
         throw new Error(`Product with name ${productName} not found.`);
       }
