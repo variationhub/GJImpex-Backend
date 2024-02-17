@@ -19,11 +19,7 @@ const orderSchema = new mongoose.Schema(
     {
         partyName: {
             type: String,
-            trim: true,
-            validate: {
-                validator: (value) => /^[a-zA-Z]+\s[a-zA-Z]+$/.test(value),
-                message: 'Name must contain one space between party name and city.',
-            },
+            trim: true
         },
         transport: {
             type: String,

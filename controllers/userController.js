@@ -19,7 +19,7 @@ const createUser = async (req, res) => {
     if (!userEnum.includes(userData.role)) {
       res.status(400).json({
         status: false,
-        message: `${userData.role} is not valid role`,
+        message: `Role is not valid...!`,
         data: null
       })
       return;
