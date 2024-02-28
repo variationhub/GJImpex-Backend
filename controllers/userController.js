@@ -1,67 +1,80 @@
 const { userEnum } = require("../contanst/data");
 const User = require("../models/userModel");
+// const main = require("../services/emailServices");
 
 // Create User
 const createUser = async (req, res) => {
   try {
     const userData = req.body;
 
-    if (!/^[a-zA-Z]+\s[a-zA-Z]+$/.test(userData.name)) {
-      res.status(400).json({
+    const requiredFields = ['name', 'nickName', 'email', 'password', 'mobileNumber', 'role'];
+    const missingFields = requiredFields.filter(field => !userData[field]);
+    if (missingFields.length > 0) {
+      return res.status(400).json({
         status: false,
-        message: "Name must contain one space between first name and last name.",
+        message: "All fields are required",
         data: null
-      })
-      return;
+      });
     }
 
-
     if (!userEnum.includes(userData.role)) {
-      res.status(400).json({
+      return res.status(400).json({
         status: false,
         message: `Role is not valid...!`,
         data: null
-      })
-      return;
+      });
     }
 
-    if (!/^[0-9]{10}$/.test(userData.phone)) {
-      res.status(400).json({
+    if (!/^[0-9]{10}$/.test(userData.mobileNumber)) {
+      return res.status(400).json({
         status: false,
         message: "Phone number must be 10 digits",
         data: null
-      })
-      return;
+      });
     }
 
-    if (userData.password.length < 6) {
-      res.status(400).json({
+    if (userData.password.length <= 6) {
+      return res.status(400).json({
         status: false,
         message: "Password is too short",
         data: null
-      })
-      return;
+      });
     }
 
+    const existingUser = await User.findOne({
+      $or: [
+        { email: userData.email },
+        { mobileNumber: userData.mobileNumber },
+        { nickName: userData.nickName }
+      ]
+    });
+
+    if (existingUser) {
+      const duplicateFields = [];
+      if (existingUser.email === userData.email) duplicateFields.push('Email');
+      if (existingUser.mobileNumber === userData.mobileNumber) duplicateFields.push('Mobile Number');
+      if (existingUser.nickName === userData.nickName) duplicateFields.push('Nick Name');
+
+      return res.status(400).json({
+        status: false,
+        message: `${duplicateFields.join(', ')} already exists`,
+        data: null
+      });
+    }
+
+    // Create the user if all checks pass
     const user = await User.create(userData);
-    res.status(201).json({
+
+    // main("dhruvsuhagiya111@gmail.com").catch(err => console.log(err));
+
+    return res.status(201).json({
       status: true,
       data: user,
       message: "User created successfully"
     });
 
   } catch (error) {
-    if (error.code === 11000) {
-      const duplicateKeyField = Object.keys(error.keyValue)[0];
-
-      return res.status(400).json({
-        status: false,
-        data: null,
-        message: `${duplicateKeyField} number is already exists.`,
-      });
-    }
-
-    res.status(500).json({
+    return res.status(500).json({
       status: false,
       data: null,
       message: error.message
@@ -71,69 +84,69 @@ const createUser = async (req, res) => {
 
 // Update User
 const updateUser = async (req, res) => {
-  const userId = req.params.id;
-  const userData = req.body;
-  if (userData.name && !/^[a-zA-Z]+\s[a-zA-Z]+$/.test(userData.name)) {
-    res.status(400).json({
-      status: false,
-      message: "Name must contain one space between first name and last name.",
-      data: null
-    })
-    return;
-  }
-
-
-  if (userData.role && !userEnum.includes(userData.role)) {
-    res.status(400).json({
-      status: false,
-      message: `${userData.role} is not valid role`,
-      data: null
-    })
-    return;
-  }
-
-  if (userData.phone && !/^[0-9]{10}$/.test(userData.phone)) {
-    res.status(400).json({
-      status: false,
-      message: "Phone number must be 10 digits",
-      data: null
-    })
-    return;
-  }
-
-  if (userData.password && userData.password.length < 6) {
-    res.status(400).json({
-      status: false,
-      message: "Password is too short",
-      data: null
-    })
-    return;
-  }
-
   try {
-    const updatedUser = await User.findByIdAndUpdate(userId, userData, { new: true });
+    const { id } = req.params;
+    const updateData = req.body;
 
-    if (!updatedUser) {
+    const existingUser = await User.findOne({ id });
+    if (!existingUser) {
       return res.status(404).json({
         status: false,
-        data: null,
-        message: "User not found"
+        message: "User not found",
+        data: null
       });
     }
 
-    res.json({
+    if (!Object.keys(updateData).length) {
+      return res.status(400).json({
+        status: false,
+        message: "Minimum one field is required",
+        data: null
+      });
+    }
+
+    if (updateData.role && !userEnum.includes(updateData.role)) {
+      return res.status(400).json({
+        status: false,
+        message: `Role is not valid...!`,
+        data: null
+      });
+    }
+
+    if (updateData.mobileNumber && !/^[0-9]{10}$/.test(updateData.mobileNumber)) {
+      return res.status(400).json({
+        status: false,
+        message: "Phone number must be 10 digits",
+        data: null
+      });
+    }
+
+    if (updateData.password && updateData.password.length <= 6) {
+      return res.status(400).json({
+        status: false,
+        message: "Password is too short",
+        data: null
+      });
+    }
+
+    Object.assign(existingUser, updateData);
+    await existingUser.save();
+
+    return res.status(200).json({
       status: true,
-      data: updatedUser,
-      message: "User update successfully"
+      data: existingUser,
+      message: "User updated successfully"
     });
+
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       status: false,
       data: null,
-      message: 'Error updating user'
+      message: error.message
     });
   }
 };
+
 
 // Get All Users
 const getAllUsers = async (req, res) => {
@@ -155,11 +168,15 @@ const getAllUsers = async (req, res) => {
 
 // Get User by ID
 const getUserById = async (req, res) => {
-  const userId = req.params.id;
+  const { id } = req.params;
   try {
-    const user = await User.findById(userId);
+    const user = await User.findOne({ id });
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({
+        status: false,
+        data: null,
+        message: "User not found"
+      });
     }
     res.json({
       status: true,
@@ -177,9 +194,9 @@ const getUserById = async (req, res) => {
 
 // Delete User
 const deleteUser = async (req, res) => {
-  const userId = req.params.id;
+  const { id } = req.params;
   try {
-    const deletedUser = await User.findByIdAndDelete(userId);
+    const deletedUser = await User.findOneAndDelete({ id });
 
     if (!deletedUser) {
       return res.status(404).json({

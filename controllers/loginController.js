@@ -4,37 +4,57 @@ const User = require('../models/userModel'); // Adjust the path based on your pr
 
 const login = async (req, res) => {
     try {
-        const { phone, password } = req.body;
+        const { mobileNumber, password, email } = req.body;
 
-        const user = await User.findOne({ phone });
+        let user;
+
+        if (mobileNumber) {
+            user = await User.findOne({ mobileNumber });
+        }
+        if (email) {
+            user = await User.findOne({ email });
+        }
 
         if (!user) {
-            return res.status(401).json({ error: 'Invalid phone number or password' });
+            return res.status(401).json({
+                status: false,
+                data: null,
+                message: 'Invalid credentials'
+            });
         }
 
         const passwordMatch = await bcrypt.compare(password, user.password);
 
         if (!passwordMatch) {
-            return res.status(401).json({ error: 'Invalid phone number or password' });
+            return res.status(401).json({
+                status: false,
+                data: null,
+                message: 'Invalid credentials'
+            });
         }
 
         const token = jwt.sign(
             {
-                _id: user._id,
+                id: user.id,
                 name: user.name,
-                phone: user.phone,
+                mobileNumber: user.mobileNumber,
+                email: user.email,
                 role: user.role,
             },
             process.env.SECRET,
-            {
-                expiresIn: "24h",
-            }
         );
 
-        res.json({ token });
+        res.json({
+            status: true,
+            token,
+            message: 'Login successful'
+        });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Internal Server Error' });
+        res.status(500).json({
+            status: false,
+            data: null,
+            message: 'Internal server error'
+        });
     }
 }
 

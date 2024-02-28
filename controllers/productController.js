@@ -3,6 +3,7 @@ const Product = require('../models/productModel');
 const createProduct = async (req, res) => {
   try {
     const productData = req.body;
+
     const product = await Product.create(productData);
     res.status(201).json({
       status: true,
@@ -13,22 +14,40 @@ const createProduct = async (req, res) => {
     res.status(500).json({
       status: false,
       data: null,
-      message: error.message
+      message: error.message.split(":")[error.message.split(":").length - 1].trim()
     });
   }
 };
 
 const updateProduct = async (req, res) => {
-  const productId = req.params.id;
+  const { id } = req.params;
+  const updateData = req.body;
+
   try {
-    const updatedProduct = await Product.findByIdAndUpdate(productId, req.body, { new: true });
-    res.json({
+    const product = await Product.findOne({ id });
+
+    if (!product) {
+      return res.status(404).json({
+        status: false,
+        data: null,
+        message: "Product not found"
+      });
+    }
+
+    Object.keys(updateData).forEach(key => {
+      product[key] = updateData[key];
+    });
+
+    await product.save();
+
+    return res.json({
       status: true,
-      data: updatedProduct,
+      data: product,
       message: "Product updated successfully"
     });
+
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       status: false,
       data: null,
       message: error.message
@@ -38,7 +57,7 @@ const updateProduct = async (req, res) => {
 
 const getAllProducts = async (req, res) => {
   try {
-    const products = await Product.find();
+    const products = await Product.find({}, { "_id": 0, "updatedAt": 0, "createdAt": 0 });
     res.json({
       status: true,
       data: products,
@@ -54,9 +73,9 @@ const getAllProducts = async (req, res) => {
 };
 
 const getProductById = async (req, res) => {
-  const productId = req.params.id;
+  const { id } = req.params;
   try {
-    const product = await Product.findById(productId);
+    const product = await Product.findOne({ id }, { "_id": 0, "updatedAt": 0, "createdAt": 0 });
     if (!product) {
       return res.status(404).json({
         status: false,
@@ -77,11 +96,13 @@ const getProductById = async (req, res) => {
     });
   }
 };
-  
+
 const deleteProduct = async (req, res) => {
-  const productId = req.params.id;
   try {
-    const deletedProduct = await Product.findByIdAndDelete(productId);
+    const { id } = req.params;
+    
+    const deletedProduct = await Product.findOneAndDelete({ id });
+
     if (!deletedProduct) {
       return res.status(404).json({
         status: false,

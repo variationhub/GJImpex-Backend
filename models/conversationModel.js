@@ -1,34 +1,25 @@
 const mongoose = require('mongoose');
 const { v4: uuid } = require('uuid');
 
-const productModel = new mongoose.Schema({
+const conversationModel = new mongoose.Schema({
     id: {
         type: String,
         default: uuid
     },
-    productName: {
+    roomId: {
         type: String,
         required: true,
         trim: true
     },
-    productType: {
+    message: {
         type: String,
-        trim: true,
-    },
-    stock: {
-        type: Number,
         required: true,
-        default: 0
+        trim: true
     },
-    minStock: {
-        type: Number,
+    sender: {
+        type: String,
         required: true,
-        default: 0
-    },
-    price: {
-        type: Number,
-        required: true,
-        default: 0
+        trim: true
     },
     createdAt: {
         type: Date,
@@ -40,9 +31,4 @@ const productModel = new mongoose.Schema({
     }
 }, { versionKey: false });
 
-productModel.pre('save', function (next) {
-    this.updatedAt = new Date();
-    next();
-});
-
-module.exports = mongoose.model('Product', productModel);
+module.exports = mongoose.model('Conversation', conversationModel);
