@@ -24,7 +24,7 @@ const productDetails = new mongoose.Schema({
         type: Boolean,
         default: false
     }
-})
+}, { versionKey: false })
 
 const orderModel = new mongoose.Schema({
     id: {
@@ -49,11 +49,10 @@ const orderModel = new mongoose.Schema({
     },
     billNumber: {
         type: String,
-        required: true,
-        unique: true,
-        trim: true
+        trim: true,
+        default: ""
     },
-    dispated: {
+    dispatched: {
         type: Boolean,
         default: false
     },
@@ -68,7 +67,7 @@ const orderModel = new mongoose.Schema({
     status: {
         type: String,
         enum: orderEnum,
-        default: "PENDING",
+        default: "BILLING",
     },
     gst: {
         type: Number,
@@ -91,6 +90,9 @@ const orderModel = new mongoose.Schema({
         type: Boolean,
         default: true
     },
+    narration: {
+        type: String,
+    },
     createdAt: {
         type: Date,
         default: Date.now
@@ -99,16 +101,11 @@ const orderModel = new mongoose.Schema({
         type: Date,
         default: Date.now
     }
-})
+}, { versionKey: false })
 
 orderModel.pre('save', function (next) {
     this.updatedAt = new Date();
-    if (this.isModified('confirmOrder')) {
-        next();
-    } else {
-        this.changed = true;
-        next();
-    }
+    next();
 });
 
 const OrderModel = mongoose.model('Order', orderModel)

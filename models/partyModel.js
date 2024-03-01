@@ -26,10 +26,15 @@ const partyModel = new mongoose.Schema({
             message: 'Mobile number must be 10 digits.'
         }
     },
-    transportIds: [{
-        type: String,
-        required: true,
-        ref: 'Transport'
+    transport: [{
+        id: {
+            type: String,
+            required: true
+        },
+        transportName: {
+            type: String,
+            required: true
+        }
     }],
     createdAt: {
         type: Date,

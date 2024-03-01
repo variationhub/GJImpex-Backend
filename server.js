@@ -9,6 +9,8 @@ const transportRoute = require("./routes/transportRoute")
 const productRoute = require("./routes/productRoute")
 const taskRoute = require("./routes/taskRoute")
 const conversationRoute = require("./routes/conversationRoute")
+const partyRoute = require("./routes/partyRoute.js")
+const orderRoute = require("./routes/orderRoute");
 
 const PORT = process.env.PORT || 8000;
 const app = express();
@@ -29,7 +31,8 @@ app.use('/api/transports', transportRoute);
 app.use('/api/products', productRoute);
 app.use('/api/tasks', taskRoute);
 app.use('/api/conversations', conversationRoute);
-// app.use('/api/orders', orderRoute);
+app.use('/api/party', partyRoute);
+app.use('/api/orders', orderRoute);
 
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
