@@ -36,6 +36,11 @@ const orderModel = new mongoose.Schema({
         required: true,
         ref: 'Party'
     },
+    transportId:{
+        type: String,
+        required: true,
+        ref: 'Transport'
+    },
     orders: [productDetails],
     companyName: {
         type: String,

@@ -1,6 +1,5 @@
 const { OrderModel } = require('../models/orderModel');
 const Product = require('../models/productModel');
-const User = require('../models/userModel');
 
 const createOrder = async (req, res) => {
 
@@ -250,6 +249,28 @@ const getAllOrders = async (req, res) => {
         $unwind: '$user' // Deconstructing the array field 'user' to individual documents
       },
       {
+        $lookup: {
+          from: 'parties',
+          localField: 'partyId',
+          foreignField: 'id',
+          as: 'party'
+        }
+      },
+      {
+        $lookup: {
+          from: 'transports',
+          localField: 'transportId',
+          foreignField: 'id',
+          as: 'transport'
+        }
+      },
+      {
+        $unwind: '$transport' // Deconstructing the array field 'transport' to individual documents
+      },
+      {
+        $unwind: '$party' // Deconstructing the array field 'party' to individual documents
+      },
+      {
         $unwind: '$orders' // Deconstructing the array field 'orders' to individual documents
       },
       {
@@ -267,6 +288,8 @@ const getAllOrders = async (req, res) => {
         $group: {
           _id: '$_id',
           id: { $first: '$id' },
+          party: { $first: '$party' },
+          transport: { $first: '$transport' },
           companyName: { $first: '$companyName' },
           billed: { $first: '$billed' },
           billNumber: { $first: '$billNumber' },
@@ -281,7 +304,15 @@ const getAllOrders = async (req, res) => {
           narration: { $first: '$narration' },
           updatedAt: { $first: '$updatedAt' },
           user: { $first: { id: '$user.id', name: '$user.name' } },
-          products: { $push: { id: '$product.id', name: '$product.productName' } }
+          products: {
+            $push: {
+              id: '$product.id',
+              productName: '$product.productName',
+              quantity: '$orders.quantity',
+              sellPrice: '$orders.sellPrice',
+              done: '$orders.done'
+            }
+          }
         }
       },
       {
@@ -323,6 +354,28 @@ const getOrderById = async (req, res) => {
         }
       },
       {
+        $lookup: {
+          from: 'parties',
+          localField: 'partyId',
+          foreignField: 'id',
+          as: 'party'
+        }
+      },
+      {
+        $lookup: {
+          from: 'transports',
+          localField: 'transportId',
+          foreignField: 'id',
+          as: 'transport'
+        }
+      },
+      {
+        $unwind: '$transport' // Deconstructing the array field 'transport' to individual documents
+      },
+      {
+        $unwind: '$party' // Deconstructing the array field 'party' to individual documents
+      },
+      {
         $unwind: '$user' // Deconstructing the array field 'user' to individual documents
       },
       {
@@ -343,6 +396,8 @@ const getOrderById = async (req, res) => {
         $group: {
           _id: '$_id',
           id: { $first: '$id' },
+          party: { $first: '$party' },
+          transport: { $first: '$transport' },
           companyName: { $first: '$companyName' },
           billed: { $first: '$billed' },
           billNumber: { $first: '$billNumber' },
@@ -357,7 +412,15 @@ const getOrderById = async (req, res) => {
           narration: { $first: '$narration' },
           updatedAt: { $first: '$updatedAt' },
           user: { $first: { id: '$user.id', name: '$user.name' } },
-          products: { $push: { id: '$product.id', name: '$product.productName' } }
+           products: {
+            $push: {
+              id: '$product.id',
+              productName: '$product.productName',
+              quantity: '$orders.quantity',
+              sellPrice: '$orders.sellPrice',
+              done: '$orders.done'
+            }
+          }
         }
       },
       {
