@@ -2,7 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require('cors');
 require("dotenv").config();
-
+const morgan = require('morgan');
 const loginRoute = require("./routes/loginRoute")
 const userRoute = require("./routes/userRoute")
 const transportRoute = require("./routes/transportRoute")
@@ -16,6 +16,7 @@ const PORT = process.env.PORT || 8000;
 const app = express();
 
 app.use(cors());
+app.use(morgan('tiny'));
 app.use(express.json());
 
 mongoose.connect(process.env.MONGODB_URL).then((connection) => {
