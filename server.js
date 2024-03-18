@@ -26,6 +26,9 @@ mongoose.connect(process.env.MONGODB_URL).then((connection) => {
 })
 
 
+app.get('/', (req, res) => {
+    res.send("Server is running")
+});
 app.use('/api/login', loginRoute);
 app.use('/api/users', userRoute);
 app.use('/api/transports', transportRoute);
