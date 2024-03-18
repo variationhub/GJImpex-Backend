@@ -289,7 +289,7 @@ const getAllOrders = async (req, res) => {
           _id: '$_id',
           id: { $first: '$id' },
           party: { $first: '$party' },
-          transport: { $first: '$transport' },
+          transportId: { $first: '$transport.id' },
           companyName: { $first: '$companyName' },
           billed: { $first: '$billed' },
           billNumber: { $first: '$billNumber' },
@@ -308,6 +308,7 @@ const getAllOrders = async (req, res) => {
             $push: {
               id: '$product.id',
               productName: '$product.productName',
+              productType: '$product.productType',
               quantity: '$orders.quantity',
               sellPrice: '$orders.sellPrice',
               done: '$orders.done'
@@ -316,7 +317,7 @@ const getAllOrders = async (req, res) => {
         }
       },
       {
-        $sort: { updatedAt: -1 }
+        $sort: { createdAt: -1 }
       }
     ]);
 
@@ -397,7 +398,7 @@ const getOrderById = async (req, res) => {
           _id: '$_id',
           id: { $first: '$id' },
           party: { $first: '$party' },
-          transport: { $first: '$transport' },
+          transportId: { $first: '$transport.id' },
           companyName: { $first: '$companyName' },
           billed: { $first: '$billed' },
           billNumber: { $first: '$billNumber' },
@@ -416,6 +417,7 @@ const getOrderById = async (req, res) => {
             $push: {
               id: '$product.id',
               productName: '$product.productName',
+              productType: '$product.productType',
               quantity: '$orders.quantity',
               sellPrice: '$orders.sellPrice',
               done: '$orders.done'
@@ -424,7 +426,7 @@ const getOrderById = async (req, res) => {
         }
       },
       {
-        $sort: { updatedAt: -1 }
+        $sort: { createdAt: -1 }
       }
     ]);
 
