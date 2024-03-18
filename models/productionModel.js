@@ -1,33 +1,22 @@
 const mongoose = require('mongoose');
 const { v4: uuid } = require('uuid');
 
-const productModel = new mongoose.Schema({
+const productionModel = new mongoose.Schema({
     id: {
         type: String,
         default: uuid
     },
-    productName: {
+    productionName: {
         type: String,
         required: true,
-        trim: true
-    },
-    productType: {
-        type: String,
         trim: true,
     },
+    type: [{
+        type: String,
+        trim: true
+    }],
     stock: {
         type: Number,
-        required: true,
-        default: 0
-    },
-    minStock: {
-        type: Number,
-        required: true,
-        default: 0
-    },
-    price: {
-        type: Number,
-        required: true,
         default: 0
     },
     createdAt: {
@@ -38,11 +27,11 @@ const productModel = new mongoose.Schema({
         type: Date,
         default: Date.now
     }
-}, { versionKey: false });
+}, { versionKey: false })
 
-productModel.pre('save', function (next) {
+productionModel.pre('save', function (next) {
     this.updatedAt = new Date();
     next();
 });
 
-module.exports = mongoose.model('Product', productModel);
+module.exports = mongoose.model('Production', productionModel);

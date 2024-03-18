@@ -5,8 +5,12 @@ require("dotenv").config();
 
 const loginRoute = require("./routes/loginRoute")
 const userRoute = require("./routes/userRoute")
+const transportRoute = require("./routes/transportRoute")
 const productRoute = require("./routes/productRoute")
-const orderRoute = require("./routes/orderRoute")
+const taskRoute = require("./routes/taskRoute")
+const conversationRoute = require("./routes/conversationRoute")
+const partyRoute = require("./routes/partyRoute.js")
+const orderRoute = require("./routes/orderRoute");
 
 const PORT = process.env.PORT || 8000;
 const app = express();
@@ -14,7 +18,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-mongoose.connect(process.env.MONGODB_URL_LOCAL).then((connection) => {
+mongoose.connect(process.env.MONGODB_URL).then((connection) => {
     console.log("DB connected");
 }).catch((err) => {
     console.error(err)
@@ -23,7 +27,11 @@ mongoose.connect(process.env.MONGODB_URL_LOCAL).then((connection) => {
 
 app.use('/api/login', loginRoute);
 app.use('/api/users', userRoute);
+app.use('/api/transports', transportRoute);
 app.use('/api/products', productRoute);
+app.use('/api/tasks', taskRoute);
+app.use('/api/conversations', conversationRoute);
+app.use('/api/party', partyRoute);
 app.use('/api/orders', orderRoute);
 
 app.listen(PORT, () => {

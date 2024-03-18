@@ -1,95 +1,119 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
+const { v4: uuid } = require('uuid');
+const { orderEnum, companyNameEnum } = require('../contanst/data');
 
-const orderProductSchema = new mongoose.Schema({
-    productName: {
+const productDetails = new mongoose.Schema({
+    id: {
         type: String,
-        required: [true, 'Product name is required'],
+        default: uuid
+    },
+    productId: {
+        type: String,
+        required: true,
+        ref: 'Product'
     },
     quantity: {
         type: Number,
-        required: [true, 'Quantity is required'],
+        required: true
     },
     sellPrice: {
         type: Number,
-        required: [true, 'Sell price is required'],
+        required: true
     },
-});
+    done: {
+        type: Boolean,
+        default: false
+    }
+}, { versionKey: false })
 
-const orderSchema = new mongoose.Schema(
-    {
-        partyName: {
-            type: String,
-            trim: true
-        },
-        transport: {
-            type: String,
-            trim: true
-        },
-        orders: [orderProductSchema],
-        LR: {
-            type: Boolean,
-            default: false,
-        },
-        userId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
-        },
-        status: {
-            type: String,
-            enum: ["pending", "dispatching and billing", "LR pending", "done"],
-            default: "pending",
-        },
-        dispatched: {
-            type: Boolean,
-            default: false,
-        },
-        billed: {
-            type: Boolean,
-            default: false,
-        },
-        orderChanged: {
-            type: Boolean,
-            default: false,
-        },
-        totalPrice: {
-            type: Number,
-            default: 0
-        },
-        gst:{
-            type: Number,
-            default: 0
-        },
-        gstPrice: {
-            type: Number,
-            default: 0
-        },
-        createdDate: {
-            type: Date,
-            default: Date.now,
-        },
-        updatedDate: {
-            type: Date,
-        },
+const orderModel = new mongoose.Schema({
+    id: {
+        type: String,
+        default: uuid
     },
-    {
-        versionKey: false,
+    partyId: {
+        type: String,
+        required: true,
+        ref: 'Party'
+    },
+    transportId:{
+        type: String,
+        required: true,
+        ref: 'Transport'
+    },
+    orders: [productDetails],
+    companyName: {
+        type: String,
+        enum: companyNameEnum,
+        required: true,
+        trim: true
+    },
+    billed: {
+        type: Boolean,
+        default: false
+    },
+    billNumber: {
+        type: String,
+        trim: true,
+        default: ""
+    },
+    dispatched: {
+        type: Boolean,
+        default: false
+    },
+    lrSent: {
+        type: Boolean,
+        default: false
+    },
+    changed: {
+        type: Boolean,
+        default: false
+    },
+    status: {
+        type: String,
+        enum: orderEnum,
+        default: "BILLING",
+    },
+    gst: {
+        type: Number,
+        default: 0
+    },
+    gstPrice: {
+        type: Number,
+        default: 0
+    },
+    totalPrice: {
+        type: Number,
+        default: 0
+    },
+    userId: {
+        type: String,
+        required: true,
+        ref: 'User'
+    },
+    confirmOrder: {
+        type: Boolean,
+        default: true
+    },
+    narration: {
+        type: String,
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
+    },
+    updatedAt: {
+        type: Date,
+        default: Date.now
     }
-);
+}, { versionKey: false })
 
-orderSchema.pre("save", function (next) {
-    const currentDate = new Date();
-    this.updatedDate = currentDate;
-    if (!this.createdDate) {
-        this.createdDate = currentDate;
-    }
+orderModel.pre('save', function (next) {
+    this.updatedAt = new Date();
     next();
 });
 
-orderSchema.pre('findOneAndUpdate', function (next) {
-    this.set({ orderChanged: true, lastUpdatedDate: new Date() });
-    next();
-});
+const OrderModel = mongoose.model('Order', orderModel)
+const OrderDetailsModel = mongoose.model('OrderDetails', productDetails)
 
-const Order = mongoose.model("Order", orderSchema);
-
-module.exports = Order;
+module.exports = { OrderModel, OrderDetailsModel }

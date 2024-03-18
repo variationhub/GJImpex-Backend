@@ -1,87 +1,75 @@
 const mongoose = require('mongoose');
+const { v4: uuid } = require('uuid');
 const bcrypt = require('bcrypt');
 const { userEnum } = require('../contanst/data');
 
-const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true,
-    validate: {
-      validator: (value) => /^[a-zA-Z]+\s[a-zA-Z]+$/.test(value),
-      message: 'Name must contain one space between first name and last name.',
+const userModel = new mongoose.Schema({
+    id: {
+        type: String,
+        default: uuid
     },
-  },
-  phone: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true,
-    validate: {
-      validator: (value) => /^[0-9]{10}$/.test(value),
-      message: 'Phone number must be 10 digits.',
+    name: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true,
     },
-  },
-  email: {
-    type: String,
-    lowercase: true,
-    trim: true,
-    validate: {
-      validator: (value) => value === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
-      message: 'Invalid email format.',
+    nickName: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true,
     },
-  },
-  role: {
-    type: String,
-    required: true,
-    enum: userEnum,
-  },
-  password: {
-    type: String,
-    required: true,
-    minlength: 6,
-  },
-  joinDate: {
-    type: Date,
-    default: Date.now()
-  },
-  createdDate: {
-    type: Date,
-    default: Date.now()
-  },
-  lastUpdatedDate: {
-    type: Date,
-    default: Date.now()
-  },
-  address: {
-    type: String,
-  }
-},
-  {
-    versionKey: false,
-  }
-);
+    mobileNumber: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true,
+        validate: {
+            validator: (value) => /^[0-9]{10}$/.test(value),
+            message: 'Mobile number must be 10 digits.'
+        }
+    },
+    email: {
+        type: String,
+        unique: true,
+        lowercase: true,
+        trim: true
+    },
+    role: {
+        type: String,
+        required: true,
+        enum: userEnum,
+        default: 'Other'
+    },
+    password: {
+        type: String,
+        required: true,
+        minlength: 6
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
+    },
+    updatedAt: {
+        type: Date,
+        default: Date.now
+    }
+}, { versionKey: false });
 
-userSchema.pre('save', async function (next) {
-  const user = this;
-  if (!user.isModified('password')) {
-    return next();
-  }
-
-  try {
-    const hashedPassword = await bcrypt.hash(user.password, 10);
-    user.password = hashedPassword;
-    next();
-  } catch (err) {
-    return next(err);
-  }
+userModel.pre('save', async function (next) {
+    this.updatedAt = new Date();
+    if (!this.isModified('password')) {
+        return next();
+    }
+    try {
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(this.password, salt);
+        this.password = hashedPassword;
+        next();
+    } catch (error) {
+        next(error);
+    }
 });
 
-userSchema.pre('findOneAndUpdate', function (next) {
-  this.set({ lastUpdatedDate: new Date() });
-  next();
-});
-
-const User = mongoose.model('User', userSchema);
-
-module.exports = User;
+module.exports = mongoose.model('User', userModel);
