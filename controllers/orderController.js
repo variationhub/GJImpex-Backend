@@ -164,6 +164,7 @@ const updateOrderStatus = async (req, res) => {
         order.billed = false;
         order.dispatched = false;
         order.lrSent = false;
+        order.billNumber = "";
       } else if (billNumber) {
         order.billed = billed === 'true';
         order.billNumber = billNumber;
@@ -302,7 +303,7 @@ const getAllOrders = async (req, res) => {
           totalPrice: { $first: '$totalPrice' },
           confirmOrder: { $first: '$confirmOrder' },
           narration: { $first: '$narration' },
-          updatedAt: { $first: '$updatedAt' },
+          createdAt: { $first: '$createdAt' },
           user: { $first: { id: '$user.id', name: '$user.name' } },
           products: {
             $push: {
@@ -411,9 +412,9 @@ const getOrderById = async (req, res) => {
           totalPrice: { $first: '$totalPrice' },
           confirmOrder: { $first: '$confirmOrder' },
           narration: { $first: '$narration' },
-          updatedAt: { $first: '$updatedAt' },
+          createdAt: { $first: '$createdAt' },
           user: { $first: { id: '$user.id', name: '$user.name' } },
-           products: {
+          products: {
             $push: {
               id: '$product.id',
               productName: '$product.productName',
