@@ -1,4 +1,13 @@
 const Party = require('../models/partyModel');
+const { sendMessage } = require('../websocketHandler');
+
+function sendMessagePartyController() {
+    const message = {
+      DOMAIN: 'PARTY',
+      INTENT: 'FETCHDATA'
+    }
+    sendMessage(message)
+  }
 
 const createParty = async (req, res) => {
     try {
@@ -13,7 +22,7 @@ const createParty = async (req, res) => {
             });
         }
         const party = await Party.create({ ...body });
-
+        sendMessagePartyController()
         return res.status(201).json({
             status: true,
             data: party,
@@ -61,7 +70,7 @@ const updateParty = async (req, res) => {
         });
 
         await existingParty.save();
-
+        sendMessagePartyController()
         return res.json({
             status: true,
             data: existingParty,
@@ -134,7 +143,7 @@ const deleteParty = async (req, res) => {
                 message: "Party not found"
             });
         }
-
+        sendMessagePartyController()
         return res.json({
             status: true,
             data: data,

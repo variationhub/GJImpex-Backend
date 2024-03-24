@@ -1,6 +1,23 @@
 const mongoose = require('mongoose');
 const { v4: uuid } = require('uuid');
 
+const productPriceHistory = new mongoose.Schema({
+    id: {
+        type: String,
+        default: uuid
+    },
+    stock: {
+        type: Number,
+        required: true,
+        default: 0
+    },
+    price: {
+        type: Number,
+        required: true,
+        default: 0
+    }
+}, { versionKey: false })
+
 const productModel = new mongoose.Schema({
     id: {
         type: String,
@@ -15,21 +32,17 @@ const productModel = new mongoose.Schema({
         type: String,
         trim: true,
     },
-    stock: {
-        type: Number,
-        required: true,
-        default: 0
-    },
     minStock: {
         type: Number,
         required: true,
         default: 0
     },
-    price: {
+    stock:{
         type: Number,
         required: true,
         default: 0
     },
+    productPriceHistory: [productPriceHistory],
     createdAt: {
         type: Date,
         default: Date.now

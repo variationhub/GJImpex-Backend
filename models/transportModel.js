@@ -14,13 +14,6 @@ const transportModel = new mongoose.Schema({
     },
     mobileNumber: {
         type: String,
-        required: true,
-        unique: true,
-        trim: true,
-        validate: {
-            validator: (value) => /^[0-9]{10}$/.test(value),
-            message: 'Mobile number must be 10 digits.'
-        }
     },
     gst: {
         type: String,

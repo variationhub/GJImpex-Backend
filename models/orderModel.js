@@ -102,6 +102,10 @@ const orderModel = new mongoose.Schema({
         type: Boolean,
         default: true
     },
+    priority:{
+        type:Boolean,
+        default:false
+    },
     narration: {
         type: String,
     },

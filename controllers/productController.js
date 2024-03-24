@@ -1,10 +1,23 @@
 const Product = require('../models/productModel');
+const { sendMessage } = require('../websocketHandler');
+
+function sendMessageProductController() {
+  const message = {
+    DOMAIN: 'PRODUCT',
+    INTENT: 'FETCHDATA'
+  }
+  sendMessage(message)
+}
 
 const createProduct = async (req, res) => {
   try {
     const productData = req.body;
+    const stock = req.body.productPriceHistory.reduce((acc, curr) => {
+      return acc + curr.stock;
+    }, 0)
 
-    const product = await Product.create(productData);
+    const product = await Product.create({ ...productData, stock });
+    sendMessageProductController()
     res.status(201).json({
       status: true,
       data: product,
@@ -39,7 +52,7 @@ const updateProduct = async (req, res) => {
     });
 
     await product.save();
-
+    sendMessageProductController()
     return res.json({
       status: true,
       data: product,
@@ -54,6 +67,43 @@ const updateProduct = async (req, res) => {
     });
   }
 };
+
+const updateProductStock = async (req, res) => {
+  const { id } = req.params;
+  const updateData = req.body.productPriceHistory;
+
+  try {
+    const product = await Product.findOne({ id });
+
+    const stock = updateData.reduce((acc, curr) => {
+      return acc + curr.stock;
+    }, product.stock)
+
+    if (!product) {
+      return res.status(404).json({
+        status: false,
+        data: null,
+        message: "Product not found"
+      });
+    }
+    product.stock = stock;
+    product.productPriceHistory = [...product.productPriceHistory, ...updateData]
+    await product.save();
+    sendMessageProductController()
+    return res.json({
+      status: true,
+      data: product,
+      message: "Product stock updated successfully"
+    });
+  }
+  catch (error) {
+    return res.status(500).json({
+      status: false,
+      data: null,
+      message: error.message
+    });
+  }
+}
 
 const getAllProducts = async (req, res) => {
   try {
@@ -100,7 +150,7 @@ const getProductById = async (req, res) => {
 const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const deletedProduct = await Product.findOneAndDelete({ id });
 
     if (!deletedProduct) {
@@ -110,6 +160,7 @@ const deleteProduct = async (req, res) => {
         message: "Product not found"
       });
     }
+    sendMessageProductController()
     res.json({
       status: true,
       data: deletedProduct,
@@ -127,6 +178,7 @@ const deleteProduct = async (req, res) => {
 module.exports = {
   createProduct,
   updateProduct,
+  updateProductStock,
   getAllProducts,
   getProductById,
   deleteProduct,

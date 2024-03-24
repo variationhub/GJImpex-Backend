@@ -1,5 +1,14 @@
 const { OrderModel } = require('../models/orderModel');
 const Product = require('../models/productModel');
+const { sendMessage } = require('../websocketHandler');
+
+function sendMessageOrderController() {
+  const message = {
+    DOMAIN: 'ORDER',
+    INTENT: 'FETCHDATA'
+  }
+  sendMessage(message)
+}
 
 const createOrder = async (req, res) => {
 
@@ -40,7 +49,7 @@ const createOrder = async (req, res) => {
     const newOrder = new OrderModel({ ...orderData, totalPrice, userId });
 
     await newOrder.save();
-
+    sendMessageOrderController()
     res.json({
       status: true,
       data: newOrder,
@@ -138,6 +147,7 @@ const updateOrder = async (req, res) => {
     }
 
     await existingOrder.save();
+    sendMessageOrderController()
 
     res.json({
       status: true,
@@ -227,6 +237,7 @@ const updateOrderStatus = async (req, res) => {
 
     order.status = newStatus;
     await order.save();
+    sendMessageOrderController()
 
     res.json({
       status: true,
@@ -262,6 +273,7 @@ const updateOrderDetails = async (req, res) => {
       singleOrder.done = status;
       await order.save();
     }
+    sendMessageOrderController()
 
     res.json({
       status: true,
@@ -281,7 +293,6 @@ const updateOrderDetails = async (req, res) => {
 const getAllOrders = async (req, res) => {
 
 
-  let confirmOrder = true;
   if (req.query.confirmOrder === 'false') {
     confirmOrder = false;
   }
@@ -345,6 +356,7 @@ const getAllOrders = async (req, res) => {
           billed: { $first: '$billed' },
           billNumber: { $first: '$billNumber' },
           dispatched: { $first: '$dispatched' },
+          priority: { $first: '$priority' },
           lrSent: { $first: '$lrSent' },
           changed: { $first: '$changed' },
           status: { $first: '$status' },
@@ -355,7 +367,7 @@ const getAllOrders = async (req, res) => {
           confirmOrder: { $first: '$confirmOrder' },
           narration: { $first: '$narration' },
           createdAt: { $first: '$createdAt' },
-          user: { $first: { id: '$user.id', name: '$user.name' } },
+          user: { $first: { id: '$user.id', name: '$user.name', nickName: '$user.nickName' } },
           products: {
             $push: {
               id: '$product.id',
@@ -462,10 +474,11 @@ const getOrderById = async (req, res) => {
           gst: { $first: '$gst' },
           gstPrice: { $first: '$gstPrice' },
           totalPrice: { $first: '$totalPrice' },
+          priority: { $first: '$priority' },
           confirmOrder: { $first: '$confirmOrder' },
           narration: { $first: '$narration' },
           createdAt: { $first: '$createdAt' },
-          user: { $first: { id: '$user.id', name: '$user.name' } },
+          user: { $first: { id: '$user.id', name: '$user.name', nickName: '$user.nickName' } },
           products: {
             $push: {
               id: '$product.id',
@@ -580,7 +593,7 @@ const filterOrdersByStatus = async (req, res) => {
           confirmOrder: { $first: '$confirmOrder' },
           narration: { $first: '$narration' },
           createdAt: { $first: '$createdAt' },
-          user: { $first: { id: '$user.id', name: '$user.name' } },
+          user: { $first: { id: '$user.id', name: '$user.name', nickName: '$user.nickName' } },
           products: {
             $push: {
               id: '$product.id',
@@ -636,6 +649,7 @@ const deleteOrder = async (req, res) => {
     }));
 
     await OrderModel.deleteOne({ id });
+    sendMessageOrderController()
 
     res.json({
       status: true,

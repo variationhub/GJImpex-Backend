@@ -1,5 +1,13 @@
 const Transport = require("../models/transportModel");
+const { sendMessage } = require("../websocketHandler");
 
+function sendMessageTransportController() {
+  const message = {
+    DOMAIN: 'TRANSPORT',
+    INTENT: 'FETCHDATA'
+  }
+  sendMessage(message)
+}
 
 function internalServerError(res) {
   return res.status(500).json({
@@ -23,6 +31,7 @@ const createTransport = async (req, res) => {
     }
 
     const transport = await Transport.create(body);
+    sendMessageTransportController()
     res.status(201).json({
       status: true,
       data: transport,
@@ -62,7 +71,7 @@ const updateTransport = async (req, res) => {
     });
 
     await existingTransport.save();
-
+    sendMessageTransportController()
     return res.status(200).json({
       status: true,
       data: existingTransport,
@@ -122,7 +131,7 @@ const deleteTransport = async (req, res) => {
         message: "Transport not found"
       });
     }
-
+    sendMessageTransportController()
     return res.json({
       status: true,
       data: data,
