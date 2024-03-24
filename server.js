@@ -11,6 +11,7 @@ const taskRoute = require("./routes/taskRoute")
 const conversationRoute = require("./routes/conversationRoute")
 const partyRoute = require("./routes/partyRoute.js")
 const orderRoute = require("./routes/orderRoute");
+const overviewRoute = require("./routes/overviewRoute");
 
 const PORT = process.env.PORT || 8000;
 const app = express();
@@ -19,7 +20,7 @@ app.use(cors());
 app.use(morgan('tiny'));
 app.use(express.json());
 
-mongoose.connect(process.env.MONGODB_URL).then((connection) => {
+mongoose.connect(process.env.MONGODB_URL_LOCAL).then((connection) => {
     console.log("DB connected");
 }).catch((err) => {
     console.error(err)
@@ -37,6 +38,7 @@ app.use('/api/tasks', taskRoute);
 app.use('/api/conversations', conversationRoute);
 app.use('/api/party', partyRoute);
 app.use('/api/orders', orderRoute);
+app.use('/api/overview', overviewRoute);
 
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);

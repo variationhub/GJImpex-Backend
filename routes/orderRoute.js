@@ -8,7 +8,8 @@ const {
     getOrderById,
     filterOrdersByStatus,
     deleteOrder,
-    updateOrderStatus
+    updateOrderStatus,
+    updateOrderDetails
 } = require('../controllers/orderController');
 
 router.use(verifyToken);
@@ -19,6 +20,7 @@ router.get('/filter/:status', filterOrdersByStatus);
 router.post('/', createOrder);
 router.put('/:id', updateOrder);
 router.put('/:id/status', updateOrderStatus);
+router.put('/change/:orderId', updateOrderDetails)
 router.delete('/:id', deleteOrder);
 
 module.exports = router;

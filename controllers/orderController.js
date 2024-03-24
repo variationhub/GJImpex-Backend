@@ -8,22 +8,30 @@ const createOrder = async (req, res) => {
 
   try {
 
-    let totalPrice = 0;
+    let totalPrice = Number(orderData?.freight) || 0;
 
-    await Promise.all(orderData.orders.map(async (order) => {
-      const product = await Product.findOne({ id: order.productId });
+    const productData = await Product.find();
+
+    await Promise.all(orderData.orders.map(async (order, index) => {
+
+      const product = productData.find(item => item.id === order.productId);
+      orderData.orders[index] = { ...order, buyPrice: product.price }
       if (!product) {
         throw new Error(`Product with ID ${order.productId} not found.`);
       }
       product.stock -= order.quantity;
-      await product.save();
 
       totalPrice += order.sellPrice * order.quantity;
+
+    }));
+
+    await Promise.all(productData.map(async (product) => {
+      await product.save();
     }));
 
     if (orderData.gstPrice) {
       if (orderData.gst) {
-        totalPrice += Number((orderData.gstPrice / orderData.gst).toFixed(0));
+        totalPrice += Number((orderData.gstPrice * (orderData.gst / 100)).toFixed(0));
       } else {
         totalPrice += orderData.gstPrice;
       }
@@ -76,8 +84,9 @@ const updateOrder = async (req, res) => {
 
     let totalPriceDifference = 0;
 
-    existingOrder.orders.forEach(order => {
+    existingOrder.orders.forEach((order, index) => {
       const newOrder = orderData.orders.find(o => o.productId === order.productId);
+      orderData.orders[index] = { ...orderData.orders[index], buyPrice: order.price }
       if (!newOrder) {
         totalPriceDifference -= order.sellPrice * order.quantity;
       } else {
@@ -100,9 +109,9 @@ const updateOrder = async (req, res) => {
 
     const existingProductIds = existingOrder.orders.map(order => order.productId);
     const newProducts = orderData.orders.filter(order => !existingProductIds.includes(order.productId));
-
     await Promise.all(newProducts.map(async (newProduct) => {
       const product = await Product.findOne({ id: newProduct.productId });
+
       if (!product) {
         throw new Error(`Product with ID ${newProduct.productId} not found.`);
       }
@@ -209,7 +218,7 @@ const updateOrderStatus = async (req, res) => {
     if (order.billed) {
       newStatus = "DISPATCHING";
       if (order.dispatched) {
-        newStatus = "LR PENGING";
+        newStatus = "LR PENDING";
         if (order.lrSent) {
           newStatus = "DONE";
         }
@@ -234,8 +243,49 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
+const updateOrderDetails = async (req, res) => {
+  const { orderId } = req.params;
+  const { status = false } = req.query
+
+  try {
+    const order = await OrderModel.findOne({ "orders.id": orderId });
+
+    if (!order) {
+      return res.status(404).json({
+        status: false,
+        data: null,
+        message: "Order not found"
+      });
+    }
+    const singleOrder = order.orders.find(item => item.id === orderId);
+    if (singleOrder) {
+      singleOrder.done = status;
+      await order.save();
+    }
+
+    res.json({
+      status: true,
+      data: order,
+      message: "Order status updated"
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      status: false,
+      data: null,
+      message: error.message
+    });
+  }
+};
 
 const getAllOrders = async (req, res) => {
+
+
+  let confirmOrder = true;
+  if (req.query.confirmOrder === 'false') {
+    confirmOrder = false;
+  }
+
   try {
     const orders = await OrderModel.aggregate([
       {
@@ -298,6 +348,7 @@ const getAllOrders = async (req, res) => {
           lrSent: { $first: '$lrSent' },
           changed: { $first: '$changed' },
           status: { $first: '$status' },
+          freight: { $first: '$freight' },
           gst: { $first: '$gst' },
           gstPrice: { $first: '$gstPrice' },
           totalPrice: { $first: '$totalPrice' },
@@ -407,6 +458,7 @@ const getOrderById = async (req, res) => {
           lrSent: { $first: '$lrSent' },
           changed: { $first: '$changed' },
           status: { $first: '$status' },
+          freight: { $first: '$freight' },
           gst: { $first: '$gst' },
           gstPrice: { $first: '$gstPrice' },
           totalPrice: { $first: '$totalPrice' },
@@ -455,10 +507,100 @@ const getOrderById = async (req, res) => {
 const filterOrdersByStatus = async (req, res) => {
   try {
     const { status } = req.params;
-    const filteredOrders = await Order.find({ status });
+    const order = await OrderModel.aggregate([
+      {
+        $match: {
+          status
+        }
+      },
+      {
+        $lookup: {
+          from: 'users', // Name of the collection you're joining with (users collection)
+          localField: 'userId', // Field from OrderModel
+          foreignField: 'id', // Field from User model
+          as: 'user'
+        }
+      },
+      {
+        $lookup: {
+          from: 'parties',
+          localField: 'partyId',
+          foreignField: 'id',
+          as: 'party'
+        }
+      },
+      {
+        $lookup: {
+          from: 'transports',
+          localField: 'transportId',
+          foreignField: 'id',
+          as: 'transport'
+        }
+      },
+      {
+        $unwind: '$transport' // Deconstructing the array field 'transport' to individual documents
+      },
+      {
+        $unwind: '$party' // Deconstructing the array field 'party' to individual documents
+      },
+      {
+        $unwind: '$user' // Deconstructing the array field 'user' to individual documents
+      },
+      {
+        $unwind: '$orders' // Deconstructing the array field 'orders' to individual documents
+      },
+      {
+        $lookup: {
+          from: 'products', // Name of the collection you're joining with (products collection)
+          localField: 'orders.productId', // Field from OrderModel
+          foreignField: 'id', // Field from Product model
+          as: 'product'
+        }
+      },
+      {
+        $unwind: '$product' // Deconstructing the array field 'product' to individual documents
+      },
+      {
+        $group: {
+          _id: '$_id',
+          id: { $first: '$id' },
+          party: { $first: '$party' },
+          transportId: { $first: '$transport.id' },
+          companyName: { $first: '$companyName' },
+          billed: { $first: '$billed' },
+          billNumber: { $first: '$billNumber' },
+          dispatched: { $first: '$dispatched' },
+          lrSent: { $first: '$lrSent' },
+          changed: { $first: '$changed' },
+          status: { $first: '$status' },
+          freight: { $first: '$freight' },
+          gst: { $first: '$gst' },
+          gstPrice: { $first: '$gstPrice' },
+          totalPrice: { $first: '$totalPrice' },
+          confirmOrder: { $first: '$confirmOrder' },
+          narration: { $first: '$narration' },
+          createdAt: { $first: '$createdAt' },
+          user: { $first: { id: '$user.id', name: '$user.name' } },
+          products: {
+            $push: {
+              id: '$product.id',
+              productName: '$product.productName',
+              productType: '$product.productType',
+              quantity: '$orders.quantity',
+              sellPrice: '$orders.sellPrice',
+              done: '$orders.done'
+            }
+          }
+        }
+      },
+      {
+        $sort: { createdAt: -1 }
+      }
+    ]);
+
     res.json({
       status: true,
-      data: filteredOrders,
+      data: order,
       message: "Orders fetched successfully"
     });
   } catch (error) {
@@ -519,5 +661,6 @@ module.exports = {
   getOrderById,
   filterOrdersByStatus,
   deleteOrder,
-  updateOrderStatus
+  updateOrderStatus,
+  updateOrderDetails
 };

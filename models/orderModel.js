@@ -20,6 +20,9 @@ const productDetails = new mongoose.Schema({
         type: Number,
         required: true
     },
+    buyPrice: {
+        type: Number
+    },
     done: {
         type: Boolean,
         default: false
@@ -36,7 +39,7 @@ const orderModel = new mongoose.Schema({
         required: true,
         ref: 'Party'
     },
-    transportId:{
+    transportId: {
         type: String,
         required: true,
         ref: 'Transport'
@@ -73,6 +76,10 @@ const orderModel = new mongoose.Schema({
         type: String,
         enum: orderEnum,
         default: "BILLING",
+    },
+    freight: {
+        type: Number,
+        default: 0
     },
     gst: {
         type: Number,
