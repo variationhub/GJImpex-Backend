@@ -5,10 +5,6 @@ function handleConnection(ws) {
     clients.push(ws);
     console.log('Client connected');
 
-    ws.on('message', function incoming(message) {
-        // Handle incoming messages
-    });
-
     ws.on('close', function () {
         clients = clients.filter(client => client !== ws);
         console.log('Client disconnected');
