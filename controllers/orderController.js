@@ -17,7 +17,7 @@ const createOrder = async (req, res) => {
 
   try {
 
-    let totalPrice = Number(orderData?.freight) || 0;
+    // let totalPrice = Number(orderData?.freight) || 0;
 
     const productData = await Product.find();
 
@@ -30,7 +30,7 @@ const createOrder = async (req, res) => {
       }
       product.stock -= order.quantity;
 
-      totalPrice += order.sellPrice * order.quantity;
+      // totalPrice += order.sellPrice * order.quantity;
 
     }));
 
@@ -38,15 +38,15 @@ const createOrder = async (req, res) => {
       await product.save();
     }));
 
-    if (orderData.gstPrice) {
-      if (orderData.gst) {
-        totalPrice += Number((orderData.gstPrice * (orderData.gst / 100)).toFixed(0));
-      } else {
-        totalPrice += orderData.gstPrice;
-      }
-    }
+    // if (orderData.gstPrice) {
+    //   if (orderData.gst) {
+    //     totalPrice += Number((orderData.gstPrice * (orderData.gst / 100)).toFixed(0));
+    //   } else {
+    //     totalPrice += orderData.gstPrice;
+    //   }
+    // }
 
-    const newOrder = new OrderModel({ ...orderData, totalPrice, userId });
+    const newOrder = new OrderModel({ ...orderData, userId });
 
     await newOrder.save();
     sendMessageOrderController()
@@ -91,16 +91,16 @@ const updateOrder = async (req, res) => {
       });
     }
 
-    let totalPriceDifference = 0;
+    // let totalPriceDifference = 0;
 
     existingOrder.orders.forEach((order, index) => {
       const newOrder = orderData.orders.find(o => o.productId === order.productId);
       orderData.orders[index] = { ...orderData.orders[index], buyPrice: order.price }
-      if (!newOrder) {
-        totalPriceDifference -= order.sellPrice * order.quantity;
-      } else {
-        totalPriceDifference += (newOrder.sellPrice - order.sellPrice) * (newOrder.quantity - order.quantity);
-      }
+      // if (!newOrder) {
+      //   totalPriceDifference -= order.sellPrice * order.quantity;
+      // } else {
+      //   totalPriceDifference += (newOrder.sellPrice - order.sellPrice) * (newOrder.quantity - order.quantity);
+      // }
     });
 
     await Promise.all(existingOrder.orders.map(async (order) => {
@@ -135,16 +135,16 @@ const updateOrder = async (req, res) => {
     });
 
     existingOrder.orders = orderData.orders;
-    existingOrder.totalPrice = orderData.orders.reduce((acc, order) => acc += order.sellPrice * order.quantity, 0);
+    existingOrder.totalPrice = Number(orderData.totalPrice);
     existingOrder.changed = true;
 
-    if (orderData.gstPrice) {
-      if (orderData.gst) {
-        existingOrder.totalPrice += Number((orderData.gstPrice / orderData.gst).toFixed(0));
-      } else {
-        existingOrder.totalPrice += orderData.gstPrice;
-      }
-    }
+    // if (orderData.gstPrice) {
+    //   if (orderData.gst) {
+    //     existingOrder.totalPrice += Number((orderData.gstPrice / orderData.gst).toFixed(0));
+    //   } else {
+    //     existingOrder.totalPrice += orderData.gstPrice;
+    //   }
+    // }
 
     await existingOrder.save();
     sendMessageOrderController()

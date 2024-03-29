@@ -151,7 +151,7 @@ const updateUser = async (req, res) => {
 // Get All Users
 const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find();
+    const users = await User.find().sort({ name: 1 });
     res.json({
       status: true,
       data: users,
