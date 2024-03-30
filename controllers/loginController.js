@@ -42,6 +42,9 @@ const login = async (req, res) => {
                 role: user.role,
             },
             process.env.SECRET,
+            {
+                expiresIn: 60 * 60 * 23
+            }
         );
 
         res.json({

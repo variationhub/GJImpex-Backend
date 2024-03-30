@@ -259,7 +259,7 @@ const updateOrderDetails = async (req, res) => {
   const { status = false } = req.query
 
   try {
-    const order = await OrderModel.findOne({ "orders.id": orderId });
+    const order = await OrderModel.findOne({ "orders.productId": orderId });
 
     if (!order) {
       return res.status(404).json({
@@ -268,7 +268,7 @@ const updateOrderDetails = async (req, res) => {
         message: "Order not found"
       });
     }
-    const singleOrder = order.orders.find(item => item.id === orderId);
+    const singleOrder = order.orders.find(item => item.productId === orderId);
     if (singleOrder) {
       singleOrder.done = status;
       await order.save();
