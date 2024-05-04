@@ -15,11 +15,11 @@ const overviewRoute = require("./routes/overviewRoute");
 const WebSocket = require('ws');
 const { handleConnection, sendMessage } = require('./websocketHandler');
 
-const wss = new WebSocket.Server({ port: 8080 });
+const wss = new WebSocket.Server({ port: 5050 });
 
 wss.on('connection', handleConnection);
 
-const PORT = process.env.PORT || 5050;
+const PORT = process.env.PORT || 5000;
 const app = express();
 
 app.use(cors());
