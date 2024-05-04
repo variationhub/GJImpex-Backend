@@ -15,18 +15,18 @@ const overviewRoute = require("./routes/overviewRoute");
 const WebSocket = require('ws');
 const { handleConnection, sendMessage } = require('./websocketHandler');
 
-const wss = new WebSocket.Server({ port: 5050 });
+const wss = new WebSocket.Server({ port: 8080 });
 
 wss.on('connection', handleConnection);
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8000;
 const app = express();
 
 app.use(cors());
 app.use(morgan('tiny'));
 app.use(express.json());
 
-mongoose.connect(process.env.MONGODB_URL_LOCAL).then((connection) => {
+mongoose.connect(process.env.MONGODB_URL).then((connection) => {
     console.log("DB connected");
 }).catch((err) => {
     console.error(err)
