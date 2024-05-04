@@ -12,11 +12,28 @@ function sendMessageProductController() {
 const createProduct = async (req, res) => {
   try {
     const productData = req.body;
+    const userId = req.user.id;
+
+    const productFind = await Product.findOne({
+      $and: [
+        { productName: productData.productName },
+        { productType: productData.productType }
+      ]
+    })
+
+    if (productFind) {
+      return res.status(400).json({
+        status: false,
+        data: null,
+        message: "Product already exists"
+      });
+    }
+
     const stock = req.body.productPriceHistory.reduce((acc, curr) => {
       return acc + curr.stock;
     }, 0)
 
-    const product = await Product.create({ ...productData, stock });
+    const product = await Product.create({ ...productData, productPriceHistory: req.body.productPriceHistory.map(value => ({ ...value, userId })), stock });
     sendMessageProductController()
     res.status(201).json({
       status: true,
@@ -71,6 +88,7 @@ const updateProduct = async (req, res) => {
 const updateProductStock = async (req, res) => {
   const { id } = req.params;
   const updateData = req.body.productPriceHistory;
+  const userId = req.user.id
 
   try {
     const product = await Product.findOne({ id });
@@ -87,7 +105,7 @@ const updateProductStock = async (req, res) => {
       });
     }
     product.stock = stock;
-    product.productPriceHistory = [...product.productPriceHistory, ...updateData]
+    product.productPriceHistory = [...product.productPriceHistory, ...updateData.map(value => ({ ...value, userId }))]
     await product.save();
     sendMessageProductController()
     return res.json({
@@ -107,10 +125,49 @@ const updateProductStock = async (req, res) => {
 
 const getAllProducts = async (req, res) => {
   try {
-    const products = await Product.find({}, { "_id": 0, "updatedAt": 0, "createdAt": 0 });
+    // const products = await Product.find({}, { "_id": 0, "updatedAt": 0, "createdAt": 0 });
+
+    const productsData = await Product.aggregate([
+      {
+        $unwind: "$productPriceHistory"
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "productPriceHistory.userId",
+          foreignField: "id",
+          as: "user"
+        }
+      },
+      {
+        $addFields: {
+          "productPriceHistory.nickName": { $arrayElemAt: ["$user.nickName", 0] }
+        }
+      },
+      {
+        $group: {
+          _id: "$_id",
+          id: { $first: "$id" },
+          productName: { $first: "$productName" },
+          productType: { $first: "$productType" },
+          minStock: { $first: "$minStock" },
+          stock: { $first: "$stock" },
+          createdAt: { $first: "$createdAt" },
+          updatedAt: { $first: "$updatedAt" },
+          pendingOrderStock: { $first: "$pendingOrderStock" },
+          productPriceHistory: { $push: "$productPriceHistory" }
+        }
+      },
+      {
+        $sort: {
+          productName: 1
+        }
+      }
+    ]);
+
     res.json({
       status: true,
-      data: products,
+      data: productsData,
       message: "Products fetch successfully"
     });
   } catch (error) {

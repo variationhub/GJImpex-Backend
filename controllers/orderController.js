@@ -1,5 +1,6 @@
 const { OrderModel } = require('../models/orderModel');
 const Product = require('../models/productModel');
+const Party = require('../models/partyModel');
 const { sendMessage } = require('../websocketHandler');
 
 function sendMessageOrderController() {
@@ -13,59 +14,61 @@ function sendMessageOrderController() {
 const createOrder = async (req, res) => {
 
   const orderData = req.body;
-  const userId = req.user.id;
+  const createdBy = req.user?.id;
+  const productData = await Product.find({ id: { $in: orderData.orders.map(item => item.productId) } });
+  const { userId } = await Party.findOne({ id: orderData.partyId }, { userId: 1 });
 
   try {
-
-    // let totalPrice = Number(orderData?.freight) || 0;
-
-    const productData = await Product.find();
-
     await Promise.all(orderData.orders.map(async (order, index) => {
 
       const product = productData.find(item => item.id === order.productId);
-      orderData.orders[index] = { ...order, buyPrice: product.price }
-      if (!product) {
-        throw new Error(`Product with ID ${order.productId} not found.`);
+
+      if (product.stock < order.quantity) {
+        throw new Error(`${product.productName} have Only ${product.stock} stock.`);
+      } else {
+
+        let stock = order.quantity;
+        let subTotalPrice = 0;
+        product?.productPriceHistory?.forEach(item => {
+          if (item.stock >= stock) {
+            subTotalPrice += stock * item.price;
+            item.stock -= stock
+            stock = 0;
+            return;
+          } else {
+            stock -= item.stock;
+            subTotalPrice += item.stock * item.price
+            item.stock = 0;
+          }
+        })
+        orderData.orders[index] = {
+          ...order,
+          buyPrice: subTotalPrice / order.quantity,
+        }
+        subTotalPrice = 0;
+
+        if (!product) {
+          throw new Error(`Product with ID ${order.productId} not found.`);
+        }
+        product.stock -= order.quantity;
       }
-      product.stock -= order.quantity;
-
-      // totalPrice += order.sellPrice * order.quantity;
-
     }));
 
-    await Promise.all(productData.map(async (product) => {
-      await product.save();
-    }));
-
-    // if (orderData.gstPrice) {
-    //   if (orderData.gst) {
-    //     totalPrice += Number((orderData.gstPrice * (orderData.gst / 100)).toFixed(0));
-    //   } else {
-    //     totalPrice += orderData.gstPrice;
-    //   }
-    // }
-
-    const newOrder = new OrderModel({ ...orderData, userId });
+    const newOrder = new OrderModel({ ...orderData, userId, createdBy });
 
     await newOrder.save();
-    sendMessageOrderController()
+
+    await Promise.all(productData.map(async (product) => {
+      product.productPriceHistory = product.productPriceHistory.filter(item => item.stock);
+      await product.save();
+    }));
+    // sendMessageOrderController()
     res.json({
       status: true,
       data: newOrder,
       message: "Order created successfully"
     });
   } catch (error) {
-
-    await Promise.all(orderData.orders.map(async (order) => {
-      const product = await Product.findOne({ id: order.productId });
-      if (!product) {
-        throw new Error(`Product with ID ${order.productId} not found.`);
-      }
-      product.stock += Number(order.quantity);
-      await product.save();
-
-    }));
 
     res.status(500).json({
       status: false,
@@ -79,9 +82,13 @@ const createOrder = async (req, res) => {
 const updateOrder = async (req, res) => {
   const { id } = req.params;
   const orderData = req.body;
+  const userId = req.user.id;
+  const existingOrder = await OrderModel.findOne({ id });
+  const productData = await Product.find({ id: { $in: [...orderData.orders.map(item => item.productId), ...existingOrder.orders.map(item => item.productId)] } });
+
+  const newAddedProduct = orderData.orders.filter(item => !existingOrder.orders.map(i => i.productId).includes(item.productId));
 
   try {
-    const existingOrder = await OrderModel.findOne({ id });
 
     if (!existingOrder) {
       return res.status(404).json({
@@ -91,41 +98,75 @@ const updateOrder = async (req, res) => {
       });
     }
 
-    // let totalPriceDifference = 0;
+    let changes = false;
+    await Promise.all(existingOrder.orders.map(async (orderOldData) => {
+      const orderNewData = orderData.orders.find(item => item.productId === orderOldData.productId);
 
-    existingOrder.orders.forEach((order, index) => {
-      const newOrder = orderData.orders.find(o => o.productId === order.productId);
-      orderData.orders[index] = { ...orderData.orders[index], buyPrice: order.price }
-      // if (!newOrder) {
-      //   totalPriceDifference -= order.sellPrice * order.quantity;
-      // } else {
-      //   totalPriceDifference += (newOrder.sellPrice - order.sellPrice) * (newOrder.quantity - order.quantity);
-      // }
-    });
-
-    await Promise.all(existingOrder.orders.map(async (order) => {
-      const product = await Product.findOne({ id: order.productId });
-      if (!product) {
-        throw new Error(`Product with ID ${order.productId} not found.`);
+      let tempCheck = false;
+      if (!orderNewData) {
+        changes = true;
+        const productData = await Product.findOne({ id: orderOldData.productId });
+        const stock = orderOldData.quantity;
+        const price = orderOldData.buyPrice;
+        productData.stock += stock;
+        productData.productPriceHistory = [...productData.productPriceHistory, { stock, price, userId }]
+        await productData.save();
+        return;
       }
-      product.stock += order.quantity;
-      const newOrder = orderData.orders.find(o => o.productId === order.productId);
-      if (newOrder) {
-        product.stock -= newOrder.quantity;
-      }
-      await product.save();
-    }));
 
-    const existingProductIds = existingOrder.orders.map(order => order.productId);
-    const newProducts = orderData.orders.filter(order => !existingProductIds.includes(order.productId));
-    await Promise.all(newProducts.map(async (newProduct) => {
-      const product = await Product.findOne({ id: newProduct.productId });
+      if (orderNewData.quantity !== orderOldData.quantity) {
+        // maintain the product quantity
+        changes = true;
+        tempCheck = true;
+        const product = productData.find(item => item.id === orderOldData.productId);
+        if (orderNewData.quantity < orderOldData.quantity) {
+          const stock = orderOldData.quantity - orderNewData.quantity;
+          const price = orderOldData.buyPrice;
 
-      if (!product) {
-        throw new Error(`Product with ID ${newProduct.productId} not found.`);
+          product.stock += stock;
+          product.productPriceHistory = [...product.productPriceHistory, { stock, price, userId }]
+
+          orderNewData.buyPrice = price
+        } else {
+          let stock = orderNewData.quantity - orderOldData.quantity;
+          if (product.stock < stock) {
+            throw new Error(`${product.productName} have Only ${product.stock} stock.`);
+          }
+          let subTotalPrice = 0;
+          product?.productPriceHistory?.forEach(item => {
+            if (item.stock >= stock) {
+              subTotalPrice += stock * item.price;
+              item.stock -= stock
+              stock = 0;
+              return;
+            } else {
+              stock -= item.stock;
+              subTotalPrice += item.stock * item.price
+              item.stock = 0;
+            }
+          })
+
+          orderNewData.buyPrice = ((subTotalPrice / (orderNewData.quantity - orderOldData.quantity)) + orderOldData.buyPrice) / 2,
+
+            subTotalPrice = 0;
+
+          if (!product) {
+            throw new Error(`Product with ID ${order.productId} not found.`);
+          }
+          product.stock -= orderNewData.quantity - orderOldData.quantity;
+        }
       }
-      product.stock -= newProduct.quantity;
-      await product.save();
+
+      if (orderNewData.sellPrice !== orderOldData.sellPrice) {
+        // maintain the product price
+        changes = true;
+        orderOldData.sellPrice = orderNewData.sellPrice;
+      }
+
+      if (!tempCheck) {
+        orderNewData.buyPrice = orderOldData.buyPrice
+      }
+      console.log(orderOldData);
     }));
 
     Object.keys(orderData).forEach(key => {
@@ -134,26 +175,66 @@ const updateOrder = async (req, res) => {
       }
     });
 
-    existingOrder.orders = orderData.orders;
-    existingOrder.totalPrice = Number(orderData.totalPrice);
+    if (newAddedProduct.length) {
+      await Promise.all(newAddedProduct.map(async (order, index) => {
+
+        const product = productData.find(item => item.id === order.productId);
+
+        if (product.stock < order.quantity) {
+          throw new Error(`${product.productName} have Only ${product.stock} stock.`);
+        } else {
+
+          let stock = order.quantity;
+          let subTotalPrice = 0;
+          product?.productPriceHistory?.forEach(item => {
+            if (item.stock >= stock) {
+              subTotalPrice += stock * item.price;
+              item.stock -= stock
+              stock = 0;
+              return;
+            } else {
+              stock -= item.stock;
+              subTotalPrice += item.stock * item.price
+              item.stock = 0;
+            }
+          })
+          order.buyPrice = subTotalPrice / order.quantity;
+
+          if (changes) {
+            orderData.orders.find(i => i.productId === order.productId).buyPrice = subTotalPrice / order.quantity;
+          }
+
+          subTotalPrice = 0;
+
+          if (!product) {
+            throw new Error(`Product with ID ${order.productId} not found.`);
+          }
+          product.stock -= order.quantity;
+        }
+      }));
+
+      existingOrder.orders = [...existingOrder.orders, ...newAddedProduct];
+
+
+    }
+    existingOrder.orders = changes ? orderData.orders : existingOrder.orders;
+    existingOrder.totalPrice = Number(orderData.totalPrice || 0);
     existingOrder.changed = true;
 
-    // if (orderData.gstPrice) {
-    //   if (orderData.gst) {
-    //     existingOrder.totalPrice += Number((orderData.gstPrice / orderData.gst).toFixed(0));
-    //   } else {
-    //     existingOrder.totalPrice += orderData.gstPrice;
-    //   }
-    // }
-
     await existingOrder.save();
-    sendMessageOrderController()
+    sendMessageOrderController();
+
+    await Promise.all(productData.map(async (product) => {
+      product.productPriceHistory = product.productPriceHistory.filter(item => item.stock);
+      await product.save();
+    }));
 
     res.json({
       status: true,
       data: existingOrder,
       message: "Order updated successfully"
     });
+
   } catch (error) {
     res.status(500).json({
       status: false,
@@ -256,10 +337,12 @@ const updateOrderStatus = async (req, res) => {
 
 const updateOrderDetails = async (req, res) => {
   const { orderId } = req.params;
-  const { status = false } = req.query
+  const status = req.query.status || "";
+  const productId = req.query.productId
 
+  console.log(orderId, status, productId);
   try {
-    const order = await OrderModel.findOne({ "orders.productId": orderId });
+    const order = await OrderModel.findOne({ id: orderId });
 
     if (!order) {
       return res.status(404).json({
@@ -268,9 +351,19 @@ const updateOrderDetails = async (req, res) => {
         message: "Order not found"
       });
     }
-    const singleOrder = order.orders.find(item => item.productId === orderId);
+    const singleOrder = order.orders.find(item => item.productId === productId);
     if (singleOrder) {
-      singleOrder.done = status;
+      if (status === "false") {
+        singleOrder.checked = false;
+        singleOrder.done = false;
+      }
+      else if (status && singleOrder.checked) {
+        singleOrder.done = status;
+      }
+      else if (status) {
+        singleOrder.checked = status;
+        singleOrder.done = false;
+      }
       await order.save();
     }
     sendMessageOrderController()
@@ -366,6 +459,7 @@ const getAllOrders = async (req, res) => {
           totalPrice: { $first: '$totalPrice' },
           confirmOrder: { $first: '$confirmOrder' },
           narration: { $first: '$narration' },
+          createdBy: { $first: '$createdBy' },
           createdAt: { $first: '$createdAt' },
           user: { $first: { id: '$user.id', name: '$user.name', nickName: '$user.nickName' } },
           products: {
@@ -375,7 +469,8 @@ const getAllOrders = async (req, res) => {
               productType: '$product.productType',
               quantity: '$orders.quantity',
               sellPrice: '$orders.sellPrice',
-              done: '$orders.done'
+              done: '$orders.done',
+              checked: '$orders.checked'
             }
           }
         }
@@ -398,7 +493,6 @@ const getAllOrders = async (req, res) => {
     });
   }
 };
-
 
 // Get Order by ID
 const getOrderById = async (req, res) => {
@@ -477,6 +571,7 @@ const getOrderById = async (req, res) => {
           priority: { $first: '$priority' },
           confirmOrder: { $first: '$confirmOrder' },
           narration: { $first: '$narration' },
+          createdBy: { $first: '$createdBy' },
           createdAt: { $first: '$createdAt' },
           user: { $first: { id: '$user.id', name: '$user.name', nickName: '$user.nickName' } },
           products: {
@@ -486,7 +581,8 @@ const getOrderById = async (req, res) => {
               productType: '$product.productType',
               quantity: '$orders.quantity',
               sellPrice: '$orders.sellPrice',
-              done: '$orders.done'
+              done: '$orders.done',
+              checked: '$orders.checked'
             }
           }
         }
@@ -628,6 +724,7 @@ const filterOrdersByStatus = async (req, res) => {
 // Delete Order
 const deleteOrder = async (req, res) => {
   const { id } = req.params;
+  const userId = req.user.id;
   try {
     const orderData = await OrderModel.findOne({ id });
 
@@ -638,6 +735,17 @@ const deleteOrder = async (req, res) => {
         message: "Order not found"
       });
     }
+    
+    if (orderData.status === "DONE") {
+      await OrderModel.deleteOne({ id });
+      sendMessageOrderController()
+
+      return res.json({
+        status: true,
+        data: orderData,
+        message: "Order deleted successfully"
+      });
+    }
 
     await Promise.all(orderData.orders.map(async (order) => {
       const product = await Product.findOne({ id: order.productId });
@@ -645,6 +753,12 @@ const deleteOrder = async (req, res) => {
         throw new Error(`Product with ID ${order.productId} not found.`);
       }
       product.stock += Number(order.quantity);
+      const newProductAdd = {
+        stock: order.quantity,
+        price: order.buyPrice,
+        userId
+      }
+      product.productPriceHistory = [...product.productPriceHistory, newProductAdd]
       await product.save();
     }));
 

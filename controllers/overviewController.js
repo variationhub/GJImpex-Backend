@@ -5,6 +5,11 @@ const getProfit = async (req, res) => {
 
         const overviewWithProfitMetrics = await OrderModel.aggregate([
             {
+                $match: {
+                    status: 'DONE'
+                }
+            },
+            {
                 $lookup: {
                     from: 'users',
                     localField: 'userId',
@@ -23,12 +28,27 @@ const getProfit = async (req, res) => {
                     _id: '$userId',
                     username: { $first: '$user.name' },
                     nickname: { $first: '$user.nickName' },
+                    mobileNumber: { $first: '$user.mobileNumber' },
                     totalSelling: {
                         $sum: { $multiply: ['$orders.quantity', '$orders.sellPrice'] } // Calculate total selling price
                     },
                     totalBuying: {
                         $sum: { $multiply: ['$orders.quantity', '$orders.buyPrice'] } // Calculate total buying price
+                    },
+                    orderDetails: {
+                        $push: {
+                            $mergeObjects: [
+                                '$orders',
+                                { createDate: '$createdAt' }
+                            ]
+                        }
                     }
+
+                }
+            },
+            {
+                $sort: {
+                    username: 1
                 }
             }
         ]);
@@ -48,6 +68,112 @@ const getProfit = async (req, res) => {
     }
 }
 
+const getDailyReport = async (req, res) => {
+    try {
+
+        const dailyReport = await OrderModel.aggregate([
+            {
+                $match: {
+                    status: "DONE",
+                    updatedAt: { $gt: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'userId',
+                    foreignField: 'id',
+                    as: 'user'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'parties',
+                    localField: 'partyId',
+                    foreignField: 'id',
+                    as: 'party'
+                }
+            },
+            {
+                $unwind: '$user'
+            },
+            {
+                $unwind: '$party'
+            },
+            {
+                $unwind: '$orders'
+            },
+            {
+                $lookup: {
+                    from: 'products',
+                    localField: 'orders.productId',
+                    foreignField: 'id',
+                    as: 'product'
+                }
+            },
+            {
+                $unwind: '$product'
+            },
+            {
+                $group: {
+                    _id: "$_id",
+                    partyName: { $first: "$party.partyName" },
+                    companyName: { $first: "$companyName" },
+                    billNumber: { $first: "$billNumber" },
+                    freight: { $first: "$freight" },
+                    gst: { $first: "$gst" },
+                    gstPrice: { $first: "$gstPrice" },
+                    totalPrice: { $first: "$totalPrice" },
+                    nickName: { $first: "$user.nickName" },
+                    createdAt: { $first: "$createdAt" },
+                    updatedAt: { $first: "$updatedAt" },
+                    orders: {
+                        $push: {
+                            productName: "$product.productName",
+                            quantity: "$orders.quantity",
+                            sellPrice: "$orders.sellPrice"
+                        }
+                    }
+                }
+            }
+        ]);
+        
+        return res.status(201).json({
+            status: true,
+            data: dailyReport,
+            message: "Overview"
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            status: false,
+            data: null,
+            message: error.message
+        });
+    }
+}
+
+const deleteDoneOrder = async (req, res) => {
+    try {
+
+        await OrderModel.deleteMany({ status: "DONE" });
+
+        return res.status(201).json({
+            status: true,
+            data: [],
+            message: "data deleted successfully"
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            status: false,
+            data: null,
+            message: error.message
+        });
+    }
+}
 module.exports = {
-    getProfit
+    getProfit,
+    deleteDoneOrder,
+    getDailyReport
 }

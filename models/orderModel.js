@@ -21,9 +21,14 @@ const productDetails = new mongoose.Schema({
         required: true
     },
     buyPrice: {
-        type: Number
+        type: Number,
+        required: true
     },
     done: {
+        type: Boolean,
+        default: false
+    },
+    checked:{
         type: Boolean,
         default: false
     }
@@ -98,6 +103,11 @@ const orderModel = new mongoose.Schema({
         required: true,
         ref: 'User'
     },
+    createdBy:{
+        type: String,
+        required: true,
+        ref: 'User'
+    },
     confirmOrder: {
         type: Boolean,
         default: true
@@ -125,6 +135,5 @@ orderModel.pre('save', function (next) {
 });
 
 const OrderModel = mongoose.model('Order', orderModel)
-const OrderDetailsModel = mongoose.model('OrderDetails', productDetails)
 
-module.exports = { OrderModel, OrderDetailsModel }
+module.exports = { OrderModel }

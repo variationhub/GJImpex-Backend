@@ -15,6 +15,15 @@ const productPriceHistory = new mongoose.Schema({
         type: Number,
         required: true,
         default: 0
+    },
+    userId: {
+        type: String,
+        required: true,
+        ref: 'User'
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
     }
 }, { versionKey: false })
 
@@ -37,9 +46,13 @@ const productModel = new mongoose.Schema({
         required: true,
         default: 0
     },
-    stock:{
+    stock: {
         type: Number,
         required: true,
+        default: 0
+    },
+    pendingOrderStock:{
+        type: Number,
         default: 0
     },
     productPriceHistory: [productPriceHistory],

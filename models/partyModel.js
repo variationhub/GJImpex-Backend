@@ -36,6 +36,11 @@ const partyModel = new mongoose.Schema({
             required: true
         }
     }],
+    userId: {
+        type: String,
+        required: true,
+        ref: 'User'
+    },
     createdAt: {
         type: Date,
         default: Date.now

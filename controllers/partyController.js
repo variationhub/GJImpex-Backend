@@ -3,11 +3,11 @@ const { sendMessage } = require('../websocketHandler');
 
 function sendMessagePartyController() {
     const message = {
-      DOMAIN: 'PARTY',
-      INTENT: 'FETCHDATA'
+        DOMAIN: 'PARTY',
+        INTENT: 'FETCHDATA'
     }
     sendMessage(message)
-  }
+}
 
 const createParty = async (req, res) => {
     try {
@@ -21,7 +21,7 @@ const createParty = async (req, res) => {
                 message: "Party already exists"
             });
         }
-        const party = await Party.create({ ...body });
+        const party = await Party.create(body);
         sendMessagePartyController()
         return res.status(201).json({
             status: true,
