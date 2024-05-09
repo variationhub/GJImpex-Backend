@@ -75,7 +75,7 @@ const getDailyReport = async (req, res) => {
             {
                 $match: {
                     status: "DONE",
-                    updatedAt: { $gt: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+                    // updatedAt: { $gt: new Date(Date.now() - 24 * 60 * 60 * 1000) }
                 }
             },
             {
@@ -116,7 +116,7 @@ const getDailyReport = async (req, res) => {
             },
             {
                 $group: {
-                    _id: "$_id",
+                    _id: "$partyId",
                     partyName: { $first: "$party.partyName" },
                     companyName: { $first: "$companyName" },
                     billNumber: { $first: "$billNumber" },
@@ -125,19 +125,19 @@ const getDailyReport = async (req, res) => {
                     gstPrice: { $first: "$gstPrice" },
                     totalPrice: { $first: "$totalPrice" },
                     nickName: { $first: "$user.nickName" },
-                    createdAt: { $first: "$createdAt" },
-                    updatedAt: { $first: "$updatedAt" },
                     orders: {
                         $push: {
                             productName: "$product.productName",
                             quantity: "$orders.quantity",
-                            sellPrice: "$orders.sellPrice"
+                            sellPrice: "$orders.sellPrice",
+                            createAt: "$updatedAt",
+
                         }
                     }
                 }
             }
         ]);
-        
+
         return res.status(201).json({
             status: true,
             data: dailyReport,

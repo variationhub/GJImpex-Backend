@@ -129,7 +129,20 @@ const getAllProducts = async (req, res) => {
 
     const productsData = await Product.aggregate([
       {
-        $unwind: "$productPriceHistory"
+        $addFields: {
+          productPriceHistory: {
+            $ifNull: [
+              "$productPriceHistory",
+              []
+            ]
+          }
+        }
+      },
+      {
+        $unwind: {
+          path: "$productPriceHistory",
+          preserveNullAndEmptyArrays: true
+        }
       },
       {
         $lookup: {
@@ -156,6 +169,17 @@ const getAllProducts = async (req, res) => {
           updatedAt: { $first: "$updatedAt" },
           pendingOrderStock: { $first: "$pendingOrderStock" },
           productPriceHistory: { $push: "$productPriceHistory" }
+        }
+      },
+      {
+        $addFields: {
+          productPriceHistory: {
+            $filter: {
+              input: "$productPriceHistory",
+              as: "history",
+              cond: { $ne: ["$$history", {}] }
+            }
+          }
         }
       },
       {
