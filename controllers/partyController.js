@@ -90,7 +90,41 @@ const updateParty = async (req, res) => {
 
 const getAllParty = async (req, res) => {
     try {
-        const data = await Party.find({}, { "_id": 0, "createdAt": 0, "updatedAt": 0 }).sort({ "partyName": 1 });
+        // const data = await Party.find({}, { "_id": 0, "createdAt": 0, "updatedAt": 0 }).sort({ "partyName": 1 });
+        const data = await Party.aggregate([
+            {
+                $lookup: {
+                    from: 'users',  // The collection name in MongoDB for User
+                    localField: 'userId',
+                    foreignField: 'id',
+                    as: 'userDetails'
+                }
+            },
+            {
+                $unwind: {
+                    path: '$userDetails',
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    createdAt: 0,
+                    updatedAt: 0,
+                    'userDetails._id': 0,
+                    'userDetails.createdAt': 0,
+                    'userDetails.updatedAt': 0,
+                    'userDetails.password': 0,
+                    'userDetails.role': 0,
+                    'userDetails.email': 0,
+                    'userDetails.mobileNumber': 0
+                }
+            },
+            {
+                $sort: { partyName: 1 }  // Sort by partyName
+            }
+        ]); 
+        
         return res.json({
             status: true,
             data: data,

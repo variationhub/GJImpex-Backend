@@ -71,11 +71,15 @@ const getProfit = async (req, res) => {
 const getDailyReport = async (req, res) => {
     try {
 
+        const { from, to } = req.body
+        const fromDate = new Date(from); // YYYY-MM-DD
+        const toDate = new Date(to);
+
         const dailyReport = await OrderModel.aggregate([
             {
                 $match: {
                     status: "DONE",
-                    // updatedAt: { $gt: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+                    updatedAt: { $gte: fromDate, $lte: toDate }
                 }
             },
             {
@@ -155,8 +159,11 @@ const getDailyReport = async (req, res) => {
 
 const deleteDoneOrder = async (req, res) => {
     try {
+        const { from, to } = req.body
+        const fromDate = new Date(from); // YYYY-MM-DD
+        const toDate = new Date(to);
 
-        await OrderModel.deleteMany({ status: "DONE" });
+        await OrderModel.deleteMany({ status: "DONE", updatedAt: { $gte: fromDate, $lte: toDate } });
 
         return res.status(201).json({
             status: true,

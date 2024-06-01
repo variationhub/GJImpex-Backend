@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const User = require('../models/userModel'); // Adjust the path based on your project structure
+const { generatePass } = require('../services/utils');
+const { emailHelper } = require('../services/emailServices');
 
 const login = async (req, res) => {
     try {
@@ -61,4 +63,41 @@ const login = async (req, res) => {
     }
 }
 
-module.exports = login;
+const forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found",
+                status: false,
+                data: null
+            })
+        }
+
+        const newPassword = generatePass();
+        user.password = newPassword;
+
+        await user.save();
+        emailHelper(email, newPassword).then(data => console.log(data)).catch(err => console.log(err));
+
+        return res.status(200).json({
+            message: "Email sent successfully",
+            status: true,
+            data: null
+        });
+    } catch (err) {
+        return res.status(500).json({
+            message: err.message,
+            status: false,
+            data: null
+        });
+    }
+}
+
+module.exports = {
+    login,
+    forgotPassword
+};

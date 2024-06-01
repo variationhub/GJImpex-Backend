@@ -1,6 +1,7 @@
+
 const { userEnum } = require("../contanst/data");
 const User = require("../models/userModel");
-// const main = require("../services/emailServices");
+const bcrypt = require('bcrypt');
 
 // Create User
 const createUser = async (req, res) => {
@@ -147,7 +148,6 @@ const updateUser = async (req, res) => {
   }
 };
 
-
 // Get All Users
 const getAllUsers = async (req, res) => {
   try {
@@ -219,10 +219,55 @@ const deleteUser = async (req, res) => {
   }
 };
 
+const changePassword = async (req, res) => {
+  try {
+    const id = req.user.id;
+    const { newPassword, oldPassword } = req.body;
+
+    const user = await User.findOne({id});
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+        status: false,
+        data: null
+      })
+    }
+
+    const passwordMatch = await bcrypt.compare(oldPassword, user.password);
+
+    if (!passwordMatch) {
+      return res.status(400).json({
+        message: "please enter valid old password",
+        status: false,
+        data: null
+      })
+    }
+    user.password = newPassword;
+
+    await user.save();
+
+    return res.status(200).json({
+      message: "User password update success",
+      status: true,
+      data: null
+    });
+  } catch (err) {
+    return res.status(500).json({
+      message: err.message,
+      status: false,
+      data: null
+    });
+  }
+}
+
+
+
 module.exports = {
   createUser,
   updateUser,
   getAllUsers,
   getUserById,
   deleteUser,
+  changePassword
 };

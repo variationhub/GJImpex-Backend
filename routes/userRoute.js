@@ -6,7 +6,8 @@ const {
     updateUser,
     getAllUsers,
     getUserById,
-    deleteUser
+    deleteUser,
+    changePassword
 } = require('../controllers/userController');
 
 router.use(verifyToken);
@@ -15,6 +16,7 @@ router.get('/', getAllUsers);
 router.get('/:id', getUserById);
 router.post('/', createUser);
 router.put('/:id', updateUser);
+router.post('/change/password', changePassword);
 router.delete('/:id', deleteUser);
 
 module.exports = router;
