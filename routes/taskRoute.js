@@ -3,8 +3,9 @@ const verifyToken = require('../middleware/authMiddleware')
 const {
     createTask,
     updateTask,
-    getAllTask,
-    getTask,
+    updateTaskDoneStatus,
+    getTasks,
+    getTaskById,
     deleteTask
 } = require('../controllers/taskController.js')
 
@@ -14,8 +15,9 @@ router.use(verifyToken)
 
 router.post('/', createTask);
 router.put('/:id', updateTask);
-router.get('/', getAllTask);
-router.get('/:id', getTask);
+router.patch('/:id', updateTaskDoneStatus);
+router.get('/', getTasks);
+router.get('/:id', getTaskById);
 router.delete('/:id', deleteTask);
 
 module.exports = router;

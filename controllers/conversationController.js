@@ -15,6 +15,7 @@ const createConversation = async (req, res) => {
             data: conversation,
             message: "Conversation created successfully"
         });
+
     } catch (error) {
         res.status(500).json({
             status: false,
@@ -50,9 +51,14 @@ const getAllConversation = async (req, res) => {
                     _id: 0,
                     roomId: 1,
                     message: 1,
-                    sender: '$senderDetails.name', // Assuming user's name is stored in 'name' field
+                    sender: '$senderDetails.name',
                     createdAt: 1,
                     updatedAt: 1
+                }
+            },
+            {
+                $sort: {
+                    createdAt: -1
                 }
             }
         ]);

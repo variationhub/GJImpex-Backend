@@ -26,16 +26,9 @@ const taskModel = new mongoose.Schema({
         trim: true
     },
     assigner: {
-        name: {
-            type: String,
-            trim: true,
-            required: true
-        },
-        id: {
-            type: String,
-            trim: true,
-            ref: 'User'
-        }
+        type: String,
+        trim: true,
+        ref: 'User'
     },
     assignTo: [{
         name: {

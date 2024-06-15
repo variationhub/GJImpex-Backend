@@ -19,6 +19,7 @@ const createOrder = async (req, res) => {
   const { userId } = await Party.findOne({ id: orderData.partyId }, { userId: 1 });
 
   try {
+
     await Promise.all(orderData.orders.map(async (order, index) => {
 
       const product = productData.find(item => item.id === order.productId);
@@ -35,7 +36,7 @@ const createOrder = async (req, res) => {
             item.stock -= stock
             stock = 0;
             return;
-          } else {
+          } else if (item.stock) {
             stock -= item.stock;
             subTotalPrice += item.stock * item.price
             item.stock = 0;
@@ -50,18 +51,28 @@ const createOrder = async (req, res) => {
         if (!product) {
           throw new Error(`Product with ID ${order.productId} not found.`);
         }
-        product.stock -= order.quantity;
+
+        if (orderData.confirmOrder) {
+          product.stock -= order.quantity;
+        } else {
+          product.pendingOrderStock += order.quantity
+        }
       }
     }));
+
 
     const newOrder = new OrderModel({ ...orderData, userId, createdBy });
 
     await newOrder.save();
 
+
+    // remove the stock 0
+
     await Promise.all(productData.map(async (product) => {
-      product.productPriceHistory = product.productPriceHistory.filter(item => item.stock);
+      // product.productPriceHistory = product.productPriceHistory.filter(item => item.stock);
       await product.save();
     }));
+
     // sendMessageOrderController()
     res.json({
       status: true,
@@ -144,6 +155,8 @@ const updateOrder = async (req, res) => {
               subTotalPrice += item.stock * item.price
               item.stock = 0;
             }
+
+            product.pendingOrderStock += stock
           })
 
           orderNewData.buyPrice = ((subTotalPrice / (orderNewData.quantity - orderOldData.quantity)) + orderOldData.buyPrice) / 2,
@@ -153,7 +166,11 @@ const updateOrder = async (req, res) => {
           if (!product) {
             throw new Error(`Product with ID ${order.productId} not found.`);
           }
-          product.stock -= orderNewData.quantity - orderOldData.quantity;
+
+          if (orderData.confirmOrder) {
+            product.stock -= orderNewData.quantity - orderOldData.quantity;
+          }
+
         }
       }
 
@@ -165,8 +182,26 @@ const updateOrder = async (req, res) => {
 
       if (!tempCheck) {
         orderNewData.buyPrice = orderOldData.buyPrice
+        if (existingOrder.confirmOrder == false && orderData.confirmOrder == true) {
+
+          const productData = await Product.findOne({ id: orderNewData.productId });
+          const quantity = orderNewData.quantity;
+          productData.stock -= quantity;
+          productData.pendingOrderStock -= quantity;
+          await productData.save();
+
+        }
+
+        if (existingOrder.confirmOrder == true && orderData.confirmOrder == false) {
+
+          const productData = await Product.findOne({ id: orderNewData.productId });
+          const quantity = orderNewData.quantity;
+          productData.stock += quantity;
+          productData.pendingOrderStock += quantity;
+          await productData.save();
+        }
       }
-      console.log(orderOldData);
+
     }));
 
     Object.keys(orderData).forEach(key => {
@@ -209,7 +244,18 @@ const updateOrder = async (req, res) => {
           if (!product) {
             throw new Error(`Product with ID ${order.productId} not found.`);
           }
-          product.stock -= order.quantity;
+          console.log(existingOrder.confirmOrder, orderData.confirmOrder)
+          if (existingOrder.confirmOrder == true && orderData.confirmOrder == true) {
+            product.stock -= order.quantity;
+          } else if (existingOrder.confirmOrder == true && orderData.confirmOrder == false) {
+            product.stock -= order.quantity;
+            product.pendingOrderStock += order.quantity;
+          } else if (existingOrder.confirmOrder == false && orderData.confirmOrder == true) {
+            product.stock -= order.quantity;
+            product.pendingOrderStock -= order.quantity;
+          } else if (existingOrder.confirmOrder == false && orderData.confirmOrder == false) {
+            product.pendingOrderStock += order.quantity;
+          }
         }
       }));
 
@@ -217,6 +263,7 @@ const updateOrder = async (req, res) => {
 
 
     }
+
     existingOrder.orders = changes ? orderData.orders : existingOrder.orders;
     existingOrder.totalPrice = Number(orderData.totalPrice || 0);
     existingOrder.changed = true;
@@ -225,7 +272,7 @@ const updateOrder = async (req, res) => {
     sendMessageOrderController();
 
     await Promise.all(productData.map(async (product) => {
-      product.productPriceHistory = product.productPriceHistory.filter(item => item.stock);
+      // product.productPriceHistory = product.productPriceHistory.filter(item => item.stock);
       await product.save();
     }));
 
@@ -735,7 +782,7 @@ const deleteOrder = async (req, res) => {
         message: "Order not found"
       });
     }
-    
+
     if (orderData.status === "DONE") {
       await OrderModel.deleteOne({ id });
       sendMessageOrderController()
