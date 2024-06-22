@@ -49,11 +49,14 @@ const getAllConversation = async (req, res) => {
             {
                 $project: {
                     _id: 0,
+                    id: 1,
                     roomId: 1,
-                    message: 1,
-                    sender: '$senderDetails.name',
-                    createdAt: 1,
-                    updatedAt: 1
+                    text: '$message',
+                    user: {
+                        id: '$senderDetails.id',
+                        name: '$senderDetails.name'
+                    },
+                    createdAt: 1
                 }
             },
             {
