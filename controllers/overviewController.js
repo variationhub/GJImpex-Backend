@@ -39,6 +39,8 @@ const getProfit = async (req, res) => {
                         $push: {
                             $mergeObjects: [
                                 '$orders',
+                                { gstPrice: '$gstPrice' },
+                                { orderId: '$id' },
                                 { createDate: '$createdAt' }
                             ]
                         }
