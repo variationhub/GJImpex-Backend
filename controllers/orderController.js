@@ -73,7 +73,7 @@ const createOrder = async (req, res) => {
       await product.save();
     }));
 
-    // sendMessageOrderController()
+    sendMessageOrderController()
     res.json({
       status: true,
       data: newOrder,
@@ -431,11 +431,6 @@ const updateOrderDetails = async (req, res) => {
 };
 
 const getAllOrders = async (req, res) => {
-
-
-  if (req.query.confirmOrder === 'false') {
-    confirmOrder = false;
-  }
 
   try {
     const orders = await OrderModel.aggregate([

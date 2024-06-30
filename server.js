@@ -14,6 +14,8 @@ const orderRoute = require("./routes/orderRoute");
 const overviewRoute = require("./routes/overviewRoute");
 const WebSocket = require('ws');
 const { handleConnection, sendMessage } = require('./websocketHandler');
+const admin = require("firebase-admin");
+const schedule = require('node-schedule');
 
 const wss = new WebSocket.Server({ port: 8080 });
 
@@ -31,6 +33,13 @@ mongoose.connect(process.env.MONGODB_URL_LOCAL).then((connection) => {
 }).catch((err) => {
     console.error(err)
 })
+
+// const serviceAccount = require("./google-services.json");
+
+// admin.initializeApp({
+//   credential: admin.credential.cert(serviceAccount)
+// });
+
 
 app.get('/', (req, res) => {
     res.send("Server is running")

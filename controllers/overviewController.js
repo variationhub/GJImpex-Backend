@@ -2,7 +2,6 @@ const { OrderModel } = require("../models/orderModel");
 
 const getProfit = async (req, res) => {
     try {
-
         const overviewWithProfitMetrics = await OrderModel.aggregate([
             {
                 $match: {
@@ -24,6 +23,17 @@ const getProfit = async (req, res) => {
                 $unwind: '$orders'
             },
             {
+                $lookup: {
+                    from: 'products',
+                    localField: 'orders.productId',
+                    foreignField: 'id',
+                    as: 'product'
+                }
+            },
+            {
+                $unwind: '$product'
+            },
+            {
                 $group: {
                     _id: '$userId',
                     username: { $first: '$user.name' },
@@ -41,11 +51,11 @@ const getProfit = async (req, res) => {
                                 '$orders',
                                 { gstPrice: '$gstPrice' },
                                 { orderId: '$id' },
-                                { createDate: '$createdAt' }
+                                { createDate: '$createdAt' },
+                                { productName: '$product.productName' } // Include product name
                             ]
                         }
                     }
-
                 }
             },
             {
@@ -69,6 +79,7 @@ const getProfit = async (req, res) => {
         });
     }
 }
+
 
 const getDailyReport = async (req, res) => {
     try {
