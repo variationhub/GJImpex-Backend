@@ -84,7 +84,7 @@ const getProfit = async (req, res) => {
 const getDailyReport = async (req, res) => {
     try {
 
-        const { from, to } = req.body
+        const { from, to } = req.query
         const fromDate = new Date(from); // YYYY-MM-DD
         const toDate = new Date(to);
 
@@ -172,7 +172,7 @@ const getDailyReport = async (req, res) => {
 
 const deleteDoneOrder = async (req, res) => {
     try {
-        const { from, to } = req.body
+        const { from, to } = req.query
         const fromDate = new Date(from); // YYYY-MM-DD
         const toDate = new Date(to);
 
