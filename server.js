@@ -15,7 +15,7 @@ const overviewRoute = require("./routes/overviewRoute");
 const WebSocket = require('ws');
 const { handleConnection, sendMessage } = require('./websocketHandler');
 const admin = require("firebase-admin");
-const serviceAccount = require("./gj-impex-firebase-adminsdk-p6rfv-b51e922072.json");
+const serviceAccount = require("./gj-impex.json");
 
 const wss = new WebSocket.Server({ port: 8080 });
 
