@@ -1,11 +1,13 @@
 const Task = require('../models/taskModel');
+const DeviceModel = require('../models/deviceModel');
 const IdTracking = require('../models/idTrakingModel');
 const { taskTypeEnum } = require('../contanst/data');
+const scheduleNotification = require('../services/notificationServices');
 
 const createTask = async (req, res) => {
     const userId = req.user.id
 
-    const { topic, description, type, assignTo } = req.body;
+    const { topic, description, type, assignTo, timeSent = Date.now() } = req.body;
 
     if (!taskTypeEnum.includes(type)) {
         return res.status(400).json({
@@ -38,10 +40,24 @@ const createTask = async (req, res) => {
             assigner: userId,
             assignTo: type === 'General' ? [] : assignTo,
             roomId: idTracking.trakingId,
+            timeSent
         });
 
         await idTracking.save();
         await newTask.save();
+
+        if (type === 'General') {
+            const devices = await DeviceModel.find();
+            devices.forEach(device => {
+                scheduleNotification(device.deviceToken, topic, description, timeSent);
+            });
+        } else {
+            const devices = await DeviceModel.find({ userId: { $in: assignTo } });
+            devices.forEach(device => {
+                scheduleNotification(device.deviceToken, topic, description, timeSent);
+            });
+        }
+
         return res.status(201).json({
             status: true,
             message: 'Task created successfully',

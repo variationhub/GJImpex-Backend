@@ -3,10 +3,11 @@ const bcrypt = require('bcrypt');
 const User = require('../models/userModel'); // Adjust the path based on your project structure
 const { generatePass } = require('../services/utils');
 const { emailHelper } = require('../services/emailServices');
+const deviceModel = require('../models/deviceModel');
 
 const login = async (req, res) => {
     try {
-        const { mobileNumber, password, email } = req.body;
+        const { mobileNumber, password, email, deviceToken } = req.body;
 
         let user;
 
@@ -48,6 +49,20 @@ const login = async (req, res) => {
                 expiresIn: 60 * 60 * 23
             }
         );
+
+        const device = await deviceModel.findOne({ userId: user.id });
+
+        if (device) {
+            device.deviceToken = deviceToken;
+            await device.save();
+        } else {
+            const newDevice = new deviceModel({
+                userId: user.id,
+                deviceToken
+            });
+
+            await newDevice.save();
+        }
 
         res.json({
             status: true,
