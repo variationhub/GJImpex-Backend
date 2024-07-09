@@ -206,8 +206,73 @@ const getAllProducts = async (req, res) => {
 const getProductById = async (req, res) => {
   const { id } = req.params;
   try {
-    const product = await Product.findOne({ id }, { "_id": 0, "updatedAt": 0, "createdAt": 0 });
-    if (!product) {
+    const productsData = await Product.aggregate([
+      {
+        $match: {
+          id
+        }
+      },
+      {
+        $addFields: {
+          productPriceHistory: {
+            $ifNull: [
+              "$productPriceHistory",
+              []
+            ]
+          }
+        }
+      },
+      {
+        $unwind: {
+          path: "$productPriceHistory",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "productPriceHistory.userId",
+          foreignField: "id",
+          as: "user"
+        }
+      },
+      {
+        $addFields: {
+          "productPriceHistory.nickName": { $arrayElemAt: ["$user.nickName", 0] }
+        }
+      },
+      {
+        $group: {
+          _id: "$_id",
+          id: { $first: "$id" },
+          productName: { $first: "$productName" },
+          productType: { $first: "$productType" },
+          minStock: { $first: "$minStock" },
+          stock: { $first: "$stock" },
+          createdAt: { $first: "$createdAt" },
+          updatedAt: { $first: "$updatedAt" },
+          pendingOrderStock: { $first: "$pendingOrderStock" },
+          productPriceHistory: { $push: "$productPriceHistory" }
+        }
+      },
+      {
+        $addFields: {
+          productPriceHistory: {
+            $filter: {
+              input: "$productPriceHistory",
+              as: "history",
+              cond: { $ne: ["$$history", {}] }
+            }
+          }
+        }
+      },
+      {
+        $sort: {
+          productName: 1
+        }
+      }
+    ]);
+    if (productsData.length === 0) {
       return res.status(404).json({
         status: false,
         data: null,
@@ -216,7 +281,7 @@ const getProductById = async (req, res) => {
     }
     res.json({
       status: true,
-      data: product,
+      data: productsData[0],
       message: "Product found successfully"
     });
   } catch (error) {

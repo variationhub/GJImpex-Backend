@@ -81,7 +81,7 @@ const createOrder = async (req, res) => {
     });
   } catch (error) {
 
-    res.status(500).json({
+    res.status(200).json({
       status: false,
       data: null,
       message: error.message
@@ -283,7 +283,7 @@ const updateOrder = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({
+    res.status(200).json({
       status: false,
       data: null,
       message: error.message
@@ -374,7 +374,7 @@ const updateOrderStatus = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({
+    res.status(200).json({
       status: false,
       data: null,
       message: error.message
@@ -422,7 +422,7 @@ const updateOrderDetails = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({
+    res.status(200).json({
       status: false,
       data: null,
       message: error.message
@@ -501,7 +501,7 @@ const getAllOrders = async (req, res) => {
           totalPrice: { $first: '$totalPrice' },
           confirmOrder: { $first: '$confirmOrder' },
           narration: { $first: '$narration' },
-          createdBy: { $first: '$createdBy' },
+          createdBy: { $first: { id: '$user.id', name: '$user.name', nickName: '$user.nickName' } },
           createdAt: { $first: '$createdAt' },
           user: { $first: { id: '$user.id', name: '$user.name', nickName: '$user.nickName' } },
           products: {
@@ -528,7 +528,7 @@ const getAllOrders = async (req, res) => {
       message: "Order details retrieved successfully"
     });
   } catch (error) {
-    res.status(500).json({
+    res.status(200).json({
       status: false,
       data: null,
       message: error.message
@@ -613,7 +613,7 @@ const getOrderById = async (req, res) => {
           priority: { $first: '$priority' },
           confirmOrder: { $first: '$confirmOrder' },
           narration: { $first: '$narration' },
-          createdBy: { $first: '$createdBy' },
+          createdBy: { $first: { id: '$user.id', name: '$user.name', nickName: '$user.nickName' } },
           createdAt: { $first: '$createdAt' },
           user: { $first: { id: '$user.id', name: '$user.name', nickName: '$user.nickName' } },
           products: {
@@ -647,7 +647,7 @@ const getOrderById = async (req, res) => {
       message: "Order found successfully"
     });
   } catch (error) {
-    res.status(500).json({
+    res.status(200).json({
       status: false,
       data: null,
       message: 'Error fetching order'
@@ -755,7 +755,7 @@ const filterOrdersByStatus = async (req, res) => {
       message: "Orders fetched successfully"
     });
   } catch (error) {
-    res.status(500).json({
+    res.status(200).json({
       status: false,
       data: null,
       message: 'Error fetching orders'
@@ -813,7 +813,7 @@ const deleteOrder = async (req, res) => {
       message: "Order deleted successfully"
     });
   } catch (error) {
-    res.status(500).json({
+    res.status(200).json({
       status: false,
       data: null,
       message: error.message
