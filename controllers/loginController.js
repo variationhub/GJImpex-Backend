@@ -53,12 +53,12 @@ const login = async (req, res) => {
         const device = await deviceModel.findOne({ userId: user.id });
 
         if (device) {
-            device.deviceToken = deviceToken;
+            device.deviceToken = deviceToken || "none";
             await device.save();
         } else {
             const newDevice = new deviceModel({
                 userId: user.id,
-                deviceToken
+                deviceToken: deviceToken || "none"
             });
 
             await newDevice.save();
