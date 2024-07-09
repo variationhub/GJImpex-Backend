@@ -30,7 +30,7 @@ const createParty = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({
+        res.status(200).json({
             status: false,
             data: null,
             message: error.message
@@ -79,7 +79,7 @@ const updateParty = async (req, res) => {
 
 
     } catch (error) {
-        res.status(500).json({
+        res.status(200).json({
             status: false,
             data: null,
             message: error.message
@@ -132,7 +132,7 @@ const getAllParty = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({
+        res.status(200).json({
             status: false,
             data: null,
             message: error.message
@@ -158,7 +158,7 @@ const getParty = async (req, res) => {
         });
 
     } catch (error) {
-        return res.status(500).json({
+        return res.status(200).json({
             status: false,
             data: null,
             message: error.message
@@ -184,7 +184,7 @@ const deleteParty = async (req, res) => {
             message: "Party deleted successfully"
         });
     } catch (error) {
-        res.status(500).json({
+        res.status(200).json({
             status: false,
             data: null,
             message: error.message

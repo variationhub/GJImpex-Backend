@@ -2,6 +2,15 @@
 const { userEnum } = require("../contanst/data");
 const User = require("../models/userModel");
 const bcrypt = require('bcrypt');
+const { sendMessage } = require("../websocketHandler");
+
+function sendMessageUserController() {
+  const message = {
+    DOMAIN: 'USER',
+    INTENT: 'FETCHDATA'
+  }
+  sendMessage(message)
+}
 
 // Create User
 const createUser = async (req, res) => {
@@ -68,6 +77,7 @@ const createUser = async (req, res) => {
 
     // main("dhruvsuhagiya111@gmail.com").catch(err => console.log(err));
 
+    sendMessageUserController()
     return res.status(201).json({
       status: true,
       data: user,
@@ -75,7 +85,7 @@ const createUser = async (req, res) => {
     });
 
   } catch (error) {
-    return res.status(500).json({
+    return res.status(200).json({
       status: false,
       data: null,
       message: error.message
@@ -133,6 +143,7 @@ const updateUser = async (req, res) => {
     Object.assign(existingUser, updateData);
     await existingUser.save();
 
+    sendMessageUserController()
     return res.status(200).json({
       status: true,
       data: existingUser,
@@ -140,7 +151,7 @@ const updateUser = async (req, res) => {
     });
 
   } catch (error) {
-    return res.status(500).json({
+    return res.status(200).json({
       status: false,
       data: null,
       message: error.message
@@ -158,7 +169,7 @@ const getAllUsers = async (req, res) => {
       message: "Users fetch successfully"
     });
   } catch (error) {
-    res.status(500).json({
+    res.status(200).json({
       status: false,
       data: null,
       message: 'Error updating user'
@@ -184,7 +195,7 @@ const getUserById = async (req, res) => {
       message: "User found successfully"
     });
   } catch (error) {
-    res.status(500).json({
+    res.status(200).json({
       status: false,
       message: 'Error fetching user',
       data: null
@@ -205,13 +216,16 @@ const deleteUser = async (req, res) => {
         message: "User not found"
       });
     }
+
+    sendMessageUserController()
+
     res.json({
       status: true,
       data: deletedUser,
       message: "User delete successfully"
     });
   } catch (error) {
-    res.status(500).json({
+    res.status(200).json({
       status: false,
       data: null,
       message: 'Error deleting user'
@@ -253,7 +267,7 @@ const changePassword = async (req, res) => {
       data: null
     });
   } catch (err) {
-    return res.status(500).json({
+    return res.status(200).json({
       message: err.message,
       status: false,
       data: null

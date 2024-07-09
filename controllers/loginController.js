@@ -70,7 +70,7 @@ const login = async (req, res) => {
             message: 'Login successful'
         });
     } catch (error) {
-        res.status(500).json({
+        res.status(200).json({
             status: false,
             data: null,
             message: 'Internal server error'
@@ -104,7 +104,7 @@ const forgotPassword = async (req, res) => {
             data: null
         });
     } catch (err) {
-        return res.status(500).json({
+        return res.status(200).json({
             message: err.message,
             status: false,
             data: null

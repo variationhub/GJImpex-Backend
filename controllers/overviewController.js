@@ -72,7 +72,7 @@ const getProfit = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({
+        res.status(200).json({
             status: false,
             data: null,
             message: error.message
@@ -162,7 +162,7 @@ const getDailyReport = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({
+        res.status(200).json({
             status: false,
             data: null,
             message: error.message
@@ -185,7 +185,7 @@ const deleteDoneOrder = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({
+        res.status(200).json({
             status: false,
             data: null,
             message: error.message

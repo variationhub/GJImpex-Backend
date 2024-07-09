@@ -10,7 +10,7 @@ function sendMessageTransportController() {
 }
 
 function internalServerError(res) {
-  return res.status(500).json({
+  return res.status(200).json({
     status: false,
     data: null,
     message: "Internal server error"

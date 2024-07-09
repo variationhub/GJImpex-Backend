@@ -7,7 +7,9 @@ const {
     getAllProducts,
     getProductById,
     deleteProduct,
-    updateProductStock
+    updateProductStock,
+    updateProductUpdate,
+    deleteProductStock
 } = require('../controllers/productController');
 
 router.use(verifyToken);
@@ -17,6 +19,8 @@ router.get('/:id', getProductById);
 router.post('/', createProduct);
 router.put('/:id', updateProduct);
 router.put('/:id/stock', updateProductStock);
+router.put('/:id/update', updateProductUpdate);
+router.delete('/:id/stock', deleteProductStock);
 router.delete('/:id', deleteProduct);
 
 module.exports = router;

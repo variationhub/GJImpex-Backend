@@ -443,7 +443,18 @@ const getAllOrders = async (req, res) => {
         }
       },
       {
+        $lookup: {
+          from: 'users', // Name of the collection you're joining with (users collection)
+          localField: 'createdBy', // Field from OrderModel
+          foreignField: 'id', // Field from User model
+          as: 'createdBy'
+        }
+      },
+      {
         $unwind: '$user' // Deconstructing the array field 'user' to individual documents
+      },
+      {
+        $unwind: '$createdBy' // Deconstructing the array field 'user' to individual documents
       },
       {
         $lookup: {
@@ -501,7 +512,7 @@ const getAllOrders = async (req, res) => {
           totalPrice: { $first: '$totalPrice' },
           confirmOrder: { $first: '$confirmOrder' },
           narration: { $first: '$narration' },
-          createdBy: { $first: { id: '$user.id', name: '$user.name', nickName: '$user.nickName' } },
+          createdBy: { $first: { id: '$createdBy.id', name: '$createdBy.name', nickName: '$createdBy.nickName' } },
           createdAt: { $first: '$createdAt' },
           user: { $first: { id: '$user.id', name: '$user.name', nickName: '$user.nickName' } },
           products: {
@@ -556,6 +567,20 @@ const getOrderById = async (req, res) => {
       },
       {
         $lookup: {
+          from: 'users', // Name of the collection you're joining with (users collection)
+          localField: 'createdBy', // Field from OrderModel
+          foreignField: 'id', // Field from User model
+          as: 'createdBy'
+        }
+      },
+      {
+        $unwind: '$user' // Deconstructing the array field 'user' to individual documents
+      },
+      {
+        $unwind: '$createdBy' // Deconstructing the array field 'user' to individual documents
+      },
+      {
+        $lookup: {
           from: 'parties',
           localField: 'partyId',
           foreignField: 'id',
@@ -575,9 +600,6 @@ const getOrderById = async (req, res) => {
       },
       {
         $unwind: '$party' // Deconstructing the array field 'party' to individual documents
-      },
-      {
-        $unwind: '$user' // Deconstructing the array field 'user' to individual documents
       },
       {
         $unwind: '$orders' // Deconstructing the array field 'orders' to individual documents
@@ -613,7 +635,7 @@ const getOrderById = async (req, res) => {
           priority: { $first: '$priority' },
           confirmOrder: { $first: '$confirmOrder' },
           narration: { $first: '$narration' },
-          createdBy: { $first: { id: '$user.id', name: '$user.name', nickName: '$user.nickName' } },
+          createdBy: { $first: { id: '$createdBy.id', name: '$createdBy.name', nickName: '$createdBy.nickName' } },
           createdAt: { $first: '$createdAt' },
           user: { $first: { id: '$user.id', name: '$user.name', nickName: '$user.nickName' } },
           products: {

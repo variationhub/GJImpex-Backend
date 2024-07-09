@@ -17,7 +17,7 @@ const createConversation = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({
+        res.status(200).json({
             status: false,
             data: null,
             message: error.message
@@ -71,7 +71,7 @@ const getAllConversation = async (req, res) => {
             message: "Conversation fetched successfully"
         });
     } catch (error) {
-        res.status(500).json({
+        res.status(200).json({
             status: false,
             data: null,
             message: error.message
