@@ -2,7 +2,7 @@ const admin = require('firebase-admin');
 const cron = require('node-cron');
 
 // Function to schedule a notification
-const scheduleNotification = (token, title, body, sendTime) => {
+const scheduleNotification = (token = "", title="", body="", sendTime) => {
     const message = {
         notification: {
             title: title,

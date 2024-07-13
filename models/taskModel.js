@@ -39,7 +39,7 @@ const taskModel = new mongoose.Schema({
         id: {
             type: String,
             trim: true,
-            ref: 'User'
+            required: true
         }
     }],
     timeSent: {

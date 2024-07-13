@@ -3,6 +3,7 @@ const DeviceModel = require('../models/deviceModel');
 const IdTracking = require('../models/idTrakingModel');
 const { taskTypeEnum } = require('../contanst/data');
 const scheduleNotification = require('../services/notificationServices');
+const conversationModel = require('../models/conversationModel');
 
 const createTask = async (req, res) => {
     const userId = req.user.id
@@ -49,12 +50,12 @@ const createTask = async (req, res) => {
         if (type === 'General') {
             const devices = await DeviceModel.find();
             devices.forEach(device => {
-                scheduleNotification(device.deviceToken, topic, description, timeSent);
+                scheduleNotification(device?.deviceToken, topic, description, timeSent);
             });
         } else {
-            const devices = await DeviceModel.find({ userId: { $in: assignTo } });
+            const devices = await DeviceModel.find({ userId: { $in: assignTo.id } });
             devices.forEach(device => {
-                scheduleNotification(device.deviceToken, topic, description, timeSent);
+                scheduleNotification(device?.deviceToken, topic, description, timeSent);
             });
         }
 
@@ -66,7 +67,7 @@ const createTask = async (req, res) => {
     } catch (error) {
         res.status(200).json({
             status: false,
-            message: 'Internal server error',
+            message: error.message,
             data: null
         });
     }
@@ -290,6 +291,7 @@ const deleteTask = async (req, res) => {
         }
 
         await Task.deleteOne({ id: req.params.id });
+        await conversationModel.deleteMany({roomId: task.roomId})
         return res.status(200).json({
             status: true,
             message: 'Task deleted successfully',
