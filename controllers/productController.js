@@ -327,8 +327,7 @@ const updateProductUpdate = async (req, res) => {
 }
 
 const deleteProductStock = async (req, res) => {
-  const { id } = req.params;
-  const { stockId } = req.body;
+  const { id , stockId} = req.params;
 
   try {
     const product = await Product.findOne({ id });
@@ -344,7 +343,7 @@ const deleteProductStock = async (req, res) => {
     return res.json({
       status: true,
       data: product,
-      message: "Product stock updated successfully"
+      message: "Product stock delete successfully"
     });
   }
   catch (error) {

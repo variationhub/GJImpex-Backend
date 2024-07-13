@@ -20,7 +20,7 @@ router.post('/', createProduct);
 router.put('/:id', updateProduct);
 router.put('/:id/stock', updateProductStock);
 router.put('/:id/update', updateProductUpdate);
-router.delete('/:id/stock', deleteProductStock);
+router.delete('/:id/stock/:stockId', deleteProductStock);
 router.delete('/:id', deleteProduct);
 
 module.exports = router;
