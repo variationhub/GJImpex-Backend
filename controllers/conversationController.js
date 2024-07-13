@@ -1,4 +1,14 @@
 const Conversation = require("../models/conversationModel");
+const { sendMessage } = require("../websocketHandler");
+
+function sendMessageProductController(roomId = null) {
+    const message = {
+        DOMAIN: 'COMMUNICATION',
+        INTENT: 'FETCHDATA',
+        ROOMID: roomId
+    }
+    sendMessage(message)
+}
 
 const createConversation = async (req, res) => {
     try {
@@ -10,6 +20,7 @@ const createConversation = async (req, res) => {
             ...body,
         });
 
+        sendMessageProductController(body?.roomId)
         res.status(201).json({
             status: true,
             data: conversation,
