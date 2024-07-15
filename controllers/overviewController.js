@@ -1,12 +1,20 @@
 const { OrderModel } = require("../models/orderModel");
 
 const getProfit = async (req, res) => {
+
+    const { from, to } = req.query
+    const fromDate = new Date(from); // YYYY-MM-DD
+    const toDate = new Date(to);
+
+    let query = { status: 'DONE', }
+    if (from && to) {
+        query = { ...query, updatedAt: { $gte: fromDate, $lte: toDate } }
+    }
+
     try {
         const overviewWithProfitMetrics = await OrderModel.aggregate([
             {
-                $match: {
-                    status: 'DONE'
-                }
+                $match: query
             },
             {
                 $lookup: {
