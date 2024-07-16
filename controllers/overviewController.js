@@ -59,7 +59,7 @@ const getProfit = async (req, res) => {
                                 '$orders',
                                 { gstPrice: '$gstPrice' },
                                 { orderId: '$id' },
-                                { createDate: '$createdAt' },
+                                { createDate: '$updatedAt' },
                                 { productName: '$product.productName' } // Include product name
                             ]
                         }
