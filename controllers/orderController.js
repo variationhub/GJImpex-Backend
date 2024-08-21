@@ -433,7 +433,15 @@ const updateOrderDetails = async (req, res) => {
 const getAllOrders = async (req, res) => {
 
   try {
+    const tenDaysAgo = new Date();
+    tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+
     const orders = await OrderModel.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: tenDaysAgo }
+        }
+      },
       {
         $lookup: {
           from: 'users', // Name of the collection you're joining with (users collection)
