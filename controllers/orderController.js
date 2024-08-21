@@ -453,6 +453,9 @@ const updateOrderDetails = async (req, res) => {
 const getAllOrders = async (req, res) => {
 
   try {
+    const tenDaysAgo = new Date();
+    tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+
     const orders = await OrderModel.aggregate([
       {
         $match: {
