@@ -24,6 +24,10 @@ const productDetails = new mongoose.Schema({
         type: Number,
         required: true
     },
+    buyPriceHistory: {
+        type: [mongoose.Schema.Types.Mixed],
+        default: []
+    },
     done: {
         type: Boolean,
         default: false

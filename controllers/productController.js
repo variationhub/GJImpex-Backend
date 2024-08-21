@@ -30,6 +30,7 @@ const createProduct = async (req, res) => {
     }
 
     const stock = req.body.productPriceHistory.reduce((acc, curr) => {
+      curr.addedStock = curr.stock
       return acc + curr.stock;
     }, 0)
 
@@ -94,6 +95,7 @@ const updateProductStock = async (req, res) => {
     const product = await Product.findOne({ id });
 
     const stock = updateData.reduce((acc, curr) => {
+      curr.addedStock = curr.stock
       return acc + curr.stock;
     }, product.stock)
 

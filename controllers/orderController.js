@@ -13,38 +13,52 @@ function sendMessageOrderController() {
 
 const createOrder = async (req, res) => {
 
-  const orderData = req.body;
-  const createdBy = req.user?.id;
-  const productData = await Product.find({ id: { $in: orderData.orders.map(item => item.productId) } });
-  const { userId } = await Party.findOne({ id: orderData.partyId }, { userId: 1 });
-
   try {
+    const orderData = req.body;
+    const createdBy = req.user?.id;
+    const productData = await Product.find({ id: { $in: orderData.orders.map(item => item.productId) } });
+    const { userId } = await Party.findOne({ id: orderData.partyId }, { userId: 1 });
 
     await Promise.all(orderData.orders.map(async (order, index) => {
 
       const product = productData.find(item => item.id === order.productId);
-
       if (product.stock < order.quantity) {
         throw new Error(`${product.productName} have Only ${product.stock} stock.`);
       } else {
 
         let stock = order.quantity;
         let subTotalPrice = 0;
-        product?.productPriceHistory?.forEach(item => {
-          if (item.stock >= stock) {
+        const orderProductHistory = [];
+        for (let i = 0; i < product.productPriceHistory.length; i++) {
+          let item = orderData.confirmOrder ? product.productPriceHistory[i] : JSON.parse(JSON.stringify(product.productPriceHistory[i]));
+          if (item.stock >= stock && stock !== 0) {
             subTotalPrice += stock * item.price;
             item.stock -= stock
+            orderProductHistory.push({
+              quantity: stock,
+              buyPrice: item.price,
+              userId: item.userId,
+              id: item.id
+            })
             stock = 0;
-            return;
+            break;
           } else if (item.stock) {
             stock -= item.stock;
             subTotalPrice += item.stock * item.price
+            orderProductHistory.push({
+              quantity: item.stock,
+              buyPrice: item.price,
+              userId: item.userId,
+              id: item.id
+            })
             item.stock = 0;
           }
-        })
+        }
+
         orderData.orders[index] = {
           ...order,
-          buyPrice: subTotalPrice / order.quantity,
+          buyPrice: (subTotalPrice / order.quantity).toFixed(2),
+          buyPriceHistory: orderProductHistory
         }
         subTotalPrice = 0;
 
@@ -65,11 +79,7 @@ const createOrder = async (req, res) => {
 
     await newOrder.save();
 
-
-    // remove the stock 0
-
     await Promise.all(productData.map(async (product) => {
-      // product.productPriceHistory = product.productPriceHistory.filter(item => item.stock);
       await product.save();
     }));
 
@@ -91,15 +101,11 @@ const createOrder = async (req, res) => {
 
 // Update Order
 const updateOrder = async (req, res) => {
-  const { id } = req.params;
-  const orderData = req.body;
-  const userId = req.user.id;
-  const existingOrder = await OrderModel.findOne({ id });
-  const productData = await Product.find({ id: { $in: [...orderData.orders.map(item => item.productId), ...existingOrder.orders.map(item => item.productId)] } });
-
-  const newAddedProduct = orderData.orders.filter(item => !existingOrder.orders.map(i => i.productId).includes(item.productId));
-
   try {
+
+    const { id } = req.params;
+    const orderData = req.body;
+    const existingOrder = await OrderModel.findOne({ id });
 
     if (!existingOrder) {
       return res.status(404).json({
@@ -109,96 +115,103 @@ const updateOrder = async (req, res) => {
       });
     }
 
-    let changes = false;
+    const productData = await Product.find({ id: { $in: [...orderData.orders.map(item => item.productId), ...existingOrder.orders.map(item => item.productId)] } });
+    const newAddedProduct = orderData.orders.filter(item => !existingOrder.orders.map(i => i.productId).includes(item.productId));
+
     await Promise.all(existingOrder.orders.map(async (orderOldData) => {
       const orderNewData = orderData.orders.find(item => item.productId === orderOldData.productId);
-
-      let tempCheck = false;
       if (!orderNewData) {
-        changes = true;
         const productData = await Product.findOne({ id: orderOldData.productId });
-        const stock = orderOldData.quantity;
-        const price = orderOldData.buyPrice;
-        productData.stock += stock;
-        productData.productPriceHistory = [...productData.productPriceHistory, { stock, price, userId }]
+        productData.productPriceHistory.forEach(item => {
+          if (orderOldData.buyPriceHistory.map(a => a.id).includes(item.id)) {
+            const stock = orderOldData.buyPriceHistory.find(a => a.id === item.id)?.quantity || 0;
+            item.stock = item.stock + stock;
+            productData.stock = productData?.stock + stock;
+          }
+        });
         await productData.save();
         return;
-      }
+      } else {
 
-      if (orderNewData.quantity !== orderOldData.quantity) {
-        // maintain the product quantity
-        changes = true;
-        tempCheck = true;
-        const product = productData.find(item => item.id === orderOldData.productId);
-        if (orderNewData.quantity < orderOldData.quantity) {
-          const stock = orderOldData.quantity - orderNewData.quantity;
-          const price = orderOldData.buyPrice;
+        if (orderNewData.quantity !== orderOldData.quantity) {
 
-          product.stock += stock;
-          product.productPriceHistory = [...product.productPriceHistory, { stock, price, userId }]
+          const product = productData.find(item => item.id === orderOldData.productId);
+          if (orderNewData.quantity < orderOldData.quantity) {
+            let stockAdd = orderOldData.quantity - orderNewData.quantity;
+            const remaining = stockAdd;
+            for (let i = orderOldData.buyPriceHistory.length - 1; i >= 0; i--) {
+              const order = orderOldData.buyPriceHistory[i];
+              const data = product.productPriceHistory.find(item => item.id === order.id);
+              const stockSpace = data.addedStock - data.stock
+              if (stockAdd > 0) {
+                if (stockSpace >= stockAdd) {
+                  data.stock += stockAdd;
+                  order.quantity -= stockAdd;
+                  stockAdd = 0;
+                } else {
+                  data.stock += stockSpace;
+                  stockAdd -= stockSpace;
+                  order.quantity = 0;
+                }
+              }
+            }
+            product.stock += remaining;
+            orderOldData.buyPriceHistory = orderOldData.buyPriceHistory.filter(item => item.quantity)
+            orderOldData.quantity = orderOldData.buyPriceHistory.reduce((acc, curr) => acc + curr.quantity, 0);
+            orderOldData.buyPrice = (orderOldData.buyPriceHistory.reduce((acc, curr) => acc + curr.buyPrice * curr.quantity, 0) / orderOldData.quantity).toFixed(2)
 
-          orderNewData.buyPrice = price
-        } else {
-          let stock = orderNewData.quantity - orderOldData.quantity;
-          if (product.stock < stock) {
-            throw new Error(`${product.productName} have Only ${product.stock} stock.`);
-          }
-          let subTotalPrice = 0;
-          product?.productPriceHistory?.forEach(item => {
-            if (item.stock >= stock) {
-              subTotalPrice += stock * item.price;
-              item.stock -= stock
-              stock = 0;
-              return;
-            } else {
-              stock -= item.stock;
-              subTotalPrice += item.stock * item.price
-              item.stock = 0;
+          } else if (orderNewData.quantity > orderOldData.quantity) {
+
+            let stock = orderNewData.quantity - orderOldData.quantity;
+            if (product.stock < stock) {
+              throw new Error(`${product.productName} have Only ${product.stock} stock.`);
             }
 
-            product.pendingOrderStock += stock
-          })
+            let subTotalPrice = 0;
+            const orderProductHistory = [...orderOldData.buyPriceHistory];
+            for (let i = 0; i < product.productPriceHistory.length; i++) {
+              let item = orderData.confirmOrder ? product.productPriceHistory[i] : JSON.parse(JSON.stringify(product.productPriceHistory[i]));
+              if (item.stock >= stock && stock !== 0) {
+                subTotalPrice += stock * item.price;
+                item.stock -= stock
+                orderProductHistory.push({
+                  quantity: stock,
+                  buyPrice: item.price,
+                  userId: item.userId,
+                  id: item.id
+                })
+                product.stock -= stock
+                stock = 0;
+                break;
+              } else if (item.stock) {
+                product.stock -= stock
+                stock -= item.stock;
+                subTotalPrice += item.stock * item.price
+                orderProductHistory.push({
+                  quantity: item.stock,
+                  buyPrice: item.price,
+                  userId: item.userId,
+                  id: item.id
+                })
+                item.stock = 0;
+              }
+            }
 
-          orderNewData.buyPrice = ((subTotalPrice / (orderNewData.quantity - orderOldData.quantity)) + orderOldData.buyPrice) / 2,
-
+            orderOldData.buyPrice = Number(subTotalPrice / orderOldData.quantity).toFixed(2);
+            orderOldData.quantity = orderProductHistory.reduce((acc, curr) => acc + curr.quantity, 0)
+            orderOldData.buyPriceHistory = orderProductHistory
             subTotalPrice = 0;
 
-          if (!product) {
-            throw new Error(`Product with ID ${order.productId} not found.`);
+            if (!product) {
+              throw new Error(`Product with ID ${orderOldData.productId} not found.`);
+            }
+
           }
-
-          if (orderData.confirmOrder) {
-            product.stock -= orderNewData.quantity - orderOldData.quantity;
-          }
-
-        }
-      }
-
-      if (orderNewData.sellPrice !== orderOldData.sellPrice) {
-        // maintain the product price
-        changes = true;
-        orderOldData.sellPrice = orderNewData.sellPrice;
-      }
-
-      if (!tempCheck) {
-        orderNewData.buyPrice = orderOldData.buyPrice
-        if (existingOrder.confirmOrder == false && orderData.confirmOrder == true) {
-
-          const productData = await Product.findOne({ id: orderNewData.productId });
-          const quantity = orderNewData.quantity;
-          productData.stock -= quantity;
-          productData.pendingOrderStock -= quantity;
-          await productData.save();
-
         }
 
-        if (existingOrder.confirmOrder == true && orderData.confirmOrder == false) {
-
-          const productData = await Product.findOne({ id: orderNewData.productId });
-          const quantity = orderNewData.quantity;
-          productData.stock += quantity;
-          productData.pendingOrderStock += quantity;
-          await productData.save();
+        if (orderNewData.sellPrice !== orderOldData.sellPrice) {
+          changes = true;
+          orderOldData.sellPrice = orderNewData.sellPrice;
         }
       }
 
@@ -211,70 +224,77 @@ const updateOrder = async (req, res) => {
     });
 
     if (newAddedProduct.length) {
-      await Promise.all(newAddedProduct.map(async (order, index) => {
-
+      newAddedProduct.forEach(async (order, index) => {
         const product = productData.find(item => item.id === order.productId);
-
         if (product.stock < order.quantity) {
           throw new Error(`${product.productName} have Only ${product.stock} stock.`);
         } else {
-
           let stock = order.quantity;
           let subTotalPrice = 0;
-          product?.productPriceHistory?.forEach(item => {
-            if (item.stock >= stock) {
+          const orderProductHistory = [];
+          for (let i = 0; i < product.productPriceHistory.length; i++) {
+            let item = orderData.confirmOrder ? product.productPriceHistory[i] : JSON.parse(JSON.stringify(product.productPriceHistory[i]));
+            if (item.stock >= stock && stock !== 0) {
               subTotalPrice += stock * item.price;
               item.stock -= stock
+              orderProductHistory.push({
+                quantity: stock,
+                buyPrice: item.price,
+                userId: item.userId,
+                id: item.id
+              })
               stock = 0;
-              return;
-            } else {
+              break;
+            } else if (item.stock) {
               stock -= item.stock;
               subTotalPrice += item.stock * item.price
+              orderProductHistory.push({
+                quantity: item.stock,
+                buyPrice: item.price,
+                userId: item.userId,
+                id: item.id
+              })
               item.stock = 0;
             }
-          })
-          order.buyPrice = subTotalPrice / order.quantity;
-
-          if (changes) {
-            orderData.orders.find(i => i.productId === order.productId).buyPrice = subTotalPrice / order.quantity;
           }
 
+          order.buyPrice = Number((subTotalPrice / order.quantity).toFixed(2))
+          order.buyPriceHistory = orderProductHistory
           subTotalPrice = 0;
-
-          if (!product) {
-            throw new Error(`Product with ID ${order.productId} not found.`);
-          }
-          console.log(existingOrder.confirmOrder, orderData.confirmOrder)
-          if (existingOrder.confirmOrder == true && orderData.confirmOrder == true) {
-            product.stock -= order.quantity;
-          } else if (existingOrder.confirmOrder == true && orderData.confirmOrder == false) {
-            product.stock -= order.quantity;
-            product.pendingOrderStock += order.quantity;
-          } else if (existingOrder.confirmOrder == false && orderData.confirmOrder == true) {
-            product.stock -= order.quantity;
-            product.pendingOrderStock -= order.quantity;
-          } else if (existingOrder.confirmOrder == false && orderData.confirmOrder == false) {
-            product.pendingOrderStock += order.quantity;
-          }
         }
-      }));
+
+        if (!product) {
+          throw new Error(`Product with ID ${order.productId} not found.`);
+        }
+
+        if (orderData.confirmOrder) {
+          product.stock -= order.quantity;
+        } else {
+          product.pendingOrderStock += order.quantity
+        }
+      });
 
       existingOrder.orders = [...existingOrder.orders, ...newAddedProduct];
-
-
     }
 
-    existingOrder.orders = changes ? orderData.orders : existingOrder.orders;
+    existingOrder.orders = existingOrder.orders.filter(item => orderData.orders.map(item => item.productId).includes(item.productId))
     existingOrder.totalPrice = Number(orderData.totalPrice || 0);
     existingOrder.changed = true;
 
     await existingOrder.save();
-    sendMessageOrderController();
+    // sendMessageOrderController();
 
-    await Promise.all(productData.map(async (product) => {
-      // product.productPriceHistory = product.productPriceHistory.filter(item => item.stock);
-      await product.save();
-    }));
+    if (orderData.confirmOrder) {
+      await Promise.all(productData.map(async (product) => {
+        await product.save();
+      }));
+    } else {
+      const productData = await Product.find({ id: { $in: [...orderData.orders.map(item => item.productId), ...existingOrder.orders.map(item => item.productId)] } });
+      await Promise.all(productData.map(async (product) => {
+        product.pendingOrderStock += orderData.orders?.reduce((acc, curr) => acc + curr.quantity, 0);
+        await product.save();
+      }));
+    }
 
     res.json({
       status: true,
@@ -434,6 +454,11 @@ const getAllOrders = async (req, res) => {
 
   try {
     const orders = await OrderModel.aggregate([
+      {
+        $match: {
+          status: { $ne: 'DONE' }
+        }
+      },
       {
         $lookup: {
           from: 'users', // Name of the collection you're joining with (users collection)
@@ -680,6 +705,8 @@ const getOrderById = async (req, res) => {
 const filterOrdersByStatus = async (req, res) => {
   try {
     const { status } = req.params;
+    const { page, limit, skip } = req.pagination;
+
     const order = await OrderModel.aggregate([
       {
         $match: {
@@ -769,11 +796,20 @@ const filterOrdersByStatus = async (req, res) => {
       {
         $sort: { createdAt: -1 }
       }
-    ]);
+    ]).skip(skip)
+      .limit(limit);
+
+    const totalCount = await OrderModel.find({ status }).count();
 
     res.json({
       status: true,
       data: order,
+      meta_data: {
+        page,
+        items: totalCount,
+        page_size: limit,
+        pages: Math.ceil(totalCount / limit)
+      },
       message: "Orders fetched successfully"
     });
   } catch (error) {

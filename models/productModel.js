@@ -16,6 +16,11 @@ const productPriceHistory = new mongoose.Schema({
         required: true,
         default: 0
     },
+    addedStock: {
+        type: Number,
+        required: true,
+        default: 0
+    },
     userId: {
         type: String,
         required: true,
