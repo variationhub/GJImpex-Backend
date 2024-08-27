@@ -35,6 +35,11 @@ const productDetails = new mongoose.Schema({
     checked:{
         type: Boolean,
         default: false
+    },
+    dispatcherId:{
+        type: String,
+        required: true,
+        ref: 'User'
     }
 }, { versionKey: false })
 
@@ -50,8 +55,12 @@ const orderModel = new mongoose.Schema({
     },
     transportId: {
         type: String,
-        required: true,
         ref: 'Transport'
+    },
+    customTransport: {
+        type: String,
+        trim: true,
+        default: null
     },
     orders: [productDetails],
     companyName: {
@@ -117,11 +126,28 @@ const orderModel = new mongoose.Schema({
         default: true
     },
     priority:{
-        type:Boolean,
-        default:false
+        type:String,
+        trim:true,
+        default:"P0"
     },
     narration: {
         type: String,
+    },
+    dispatchDate: {
+        type: Date,
+        default: Date.now
+    },
+    orderNumber:{
+        type: Number,
+        default: ""
+    },
+    orderPast:{
+        type: Boolean,
+        default: false
+    },
+    isDeleted:{
+        type: Boolean,
+        default: false
     },
     createdAt: {
         type: Date,

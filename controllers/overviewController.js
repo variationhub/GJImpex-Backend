@@ -2,16 +2,17 @@ const { OrderModel } = require("../models/orderModel");
 
 const getProfit = async (req, res) => {
 
-    const { from, to } = req.query
-    const fromDate = new Date(from); // YYYY-MM-DD
-    const toDate = new Date(to);
-
-    let query = { status: 'DONE', }
-    if (from && to) {
-        query = { ...query, updatedAt: { $gte: fromDate, $lte: toDate } }
-    }
-
     try {
+        const { from, to } = req.query
+        const fromDate = new Date(from); // YYYY-MM-DD
+        const toDate = new Date(to); // YYYY-MM-DD
+        toDate.setDate(toDate.getDate() + 1);
+
+        let query = { status: 'DONE', }
+        if (from && to) {
+            query = { ...query, dispatched: { $gte: fromDate, $lte: toDate } }
+        }
+
         const overviewWithProfitMetrics = await OrderModel.aggregate([
             {
                 $match: query
@@ -88,19 +89,19 @@ const getProfit = async (req, res) => {
     }
 }
 
-
 const getDailyReport = async (req, res) => {
     try {
 
         const { from, to } = req.query
         const fromDate = new Date(from); // YYYY-MM-DD
-        const toDate = new Date(to);
+        const toDate = new Date(to); // YYYY-MM-DD
+        toDate.setDate(toDate.getDate() + 1);
 
         const dailyReport = await OrderModel.aggregate([
             {
                 $match: {
                     status: "DONE",
-                    updatedAt: { $gte: fromDate, $lte: toDate }
+                    dispatched: { $gte: fromDate, $lte: toDate }
                 }
             },
             {
@@ -182,7 +183,8 @@ const deleteDoneOrder = async (req, res) => {
     try {
         const { from, to } = req.query
         const fromDate = new Date(from); // YYYY-MM-DD
-        const toDate = new Date(to);
+        const toDate = new Date(to); // YYYY-MM-DD
+        toDate.setDate(toDate.getDate() + 1);
 
         await OrderModel.deleteMany({ status: "DONE", updatedAt: { $gte: fromDate, $lte: toDate } });
 

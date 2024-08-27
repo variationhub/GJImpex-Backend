@@ -29,10 +29,22 @@ const createProduct = async (req, res) => {
       });
     }
 
+    let flag = false;
     const stock = req.body.productPriceHistory.reduce((acc, curr) => {
-      curr.addedStock = curr.stock
+      curr.addedStock = curr.stock;
+      if(curr.stock === 0 || curr.price === 0){
+        flag = true;
+      }
       return acc + curr.stock;
     }, 0)
+
+    if(flag) {
+      return res.status(400).json({
+        status: false,
+        data: null,
+        message: "Stock or Price should not be zero"
+      });
+    }
 
     const product = await Product.create({ ...productData, productPriceHistory: req.body.productPriceHistory.map(value => ({ ...value, userId })), stock });
     sendMessageProductController()
@@ -94,11 +106,6 @@ const updateProductStock = async (req, res) => {
   try {
     const product = await Product.findOne({ id });
 
-    const stock = updateData.reduce((acc, curr) => {
-      curr.addedStock = curr.stock
-      return acc + curr.stock;
-    }, product.stock)
-
     if (!product) {
       return res.status(404).json({
         status: false,
@@ -106,7 +113,26 @@ const updateProductStock = async (req, res) => {
         message: "Product not found"
       });
     }
+
+    let flag = false;
+    const stock = updateData.reduce((acc, curr) => {
+      curr.addedStock = curr.stock
+      if (curr.stock === 0 || curr.price === 0) {
+        flag = true;
+      }
+      return acc + curr.stock;
+    }, product.stock)
+
+    if (flag) {
+      return res.status(400).json({
+        status: false,
+        data: null,
+        message: "Product stock cannot be zero or price cannot be zero"
+      });
+    }
+
     product.stock = stock;
+    product.addedStock = stock.stock
     product.productPriceHistory = [...product.productPriceHistory, ...updateData.map(value => ({ ...value, userId }))]
     await product.save();
     sendMessageProductController()
@@ -127,7 +153,6 @@ const updateProductStock = async (req, res) => {
 
 const getAllProducts = async (req, res) => {
   try {
-    // const products = await Product.find({}, { "_id": 0, "updatedAt": 0, "createdAt": 0 });
 
     const productsData = await Product.aggregate([
       {
@@ -300,14 +325,24 @@ const updateProductUpdate = async (req, res) => {
   const { stockId, stock, price } = req.body;
 
   try {
+
+    if (stock === 0 || price === 0) {
+      return res.status(400).json({
+        status: false,
+        data: null,
+        message: "Stock or price must be greater than 0"
+      });
+    }
+
     const product = await Product.findOne({ id });
 
     const data = product?.productPriceHistory?.find(value => value.id === stockId)
 
-    product.stock = product.stock - data.stock
+    product.stock -= data.stock
 
-    data.stock = stock
-    data.price = price
+    data.stock = stock;
+    data.addedStock = stock;
+    data.price = price;
 
     product.stock += stock
 
@@ -329,7 +364,7 @@ const updateProductUpdate = async (req, res) => {
 }
 
 const deleteProductStock = async (req, res) => {
-  const { id , stockId} = req.params;
+  const { id, stockId } = req.params;
 
   try {
     const product = await Product.findOne({ id });

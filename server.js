@@ -28,7 +28,7 @@ app.use(cors());
 app.use(morgan('tiny'));
 app.use(express.json());
 
-mongoose.connect(process.env.MONGODB_URL_DEV).then((connection) => {
+mongoose.connect(process.env.MONGODB_URL).then((connection) => {
     console.log("DB connected");
 }).catch((err) => {
     console.error(err)

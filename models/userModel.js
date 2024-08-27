@@ -42,6 +42,14 @@ const userModel = new mongoose.Schema({
         enum: userEnum,
         default: 'Other'
     },
+    dispatcheerPriority: {
+        type: Number,
+        default: 0,
+    },
+    dispatcherColor:{
+        type: String,
+        default: '#000000'
+    },
     password: {
         type: String,
         required: true,
