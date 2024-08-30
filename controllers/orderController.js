@@ -1,7 +1,10 @@
 const { OrderModel } = require('../models/orderModel');
+const DeviceModel = require('../models/deviceModel');
 const Product = require('../models/productModel');
 const Party = require('../models/partyModel');
 const { sendMessage } = require('../websocketHandler');
+const scheduleNotification = require('../services/notificationServices');
+
 
 function sendMessageOrderController() {
   const message = {
@@ -18,6 +21,8 @@ const createOrder = async (req, res) => {
     const createdBy = req.user?.id;
     const productData = await Product.find({ id: { $in: orderData.orders.map(item => item.productId) } });
     const { userId } = await Party.findOne({ id: orderData.partyId }, { userId: 1 });
+    let lastOrder = await OrderModel.findOne().sort({ createdAt: -1 });
+    let orderNumber = ((lastOrder && lastOrder.orderNumber ? lastOrder.orderNumber : 0) % 9999) + 1;
 
     await Promise.all(orderData.orders.map(async (order, index) => {
 
@@ -58,7 +63,8 @@ const createOrder = async (req, res) => {
         orderData.orders[index] = {
           ...order,
           buyPrice: (subTotalPrice / order.quantity).toFixed(2),
-          buyPriceHistory: orderProductHistory
+          buyPriceHistory: orderProductHistory,
+
         }
         subTotalPrice = 0;
 
@@ -66,16 +72,27 @@ const createOrder = async (req, res) => {
           throw new Error(`Product with ID ${order.productId} not found.`);
         }
 
+        let stockBelowMin = product.stock < product.minStock;
+
         if (orderData.confirmOrder) {
           product.stock -= order.quantity;
         } else {
           product.pendingOrderStock += order.quantity
         }
+
+        if(!stockBelowMin && product.stock < product.minStock) { 
+          const topic = "Stock Alert";
+          const description = `${product.productName} stock is below the minimum stock level`;
+          const devices = await DeviceModel.find({ userId });
+          devices.forEach(device => {
+              scheduleNotification(device?.deviceToken, topic, description, Date.now());
+          });
+        }
+
       }
     }));
 
-
-    const newOrder = new OrderModel({ ...orderData, userId, createdBy });
+    const newOrder = new OrderModel({ ...orderData, userId, createdBy, orderNumber });
 
     await newOrder.save();
 
