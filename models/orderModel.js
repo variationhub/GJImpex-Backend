@@ -127,7 +127,7 @@ const orderModel = new mongoose.Schema({
     priority:{
         type:String,
         trim:true,
-        default:"P0"
+        default:"None"
     },
     narration: {
         type: String,
