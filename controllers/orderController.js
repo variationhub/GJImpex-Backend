@@ -763,6 +763,7 @@ const getAllOrders = async (req, res) => {
           transportId: { $first: '$transportId' },
           transportName: { $first: '$transportName' },
           companyName: { $first: '$companyName' },
+          orderNumber: { $first: '$orderNumber' },
           billed: { $first: '$billed' },
           billNumber: { $first: '$billNumber' },
           dispatched: { $first: '$dispatched' },
