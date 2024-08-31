@@ -12,6 +12,7 @@ const conversationRoute = require("./routes/conversationRoute")
 const partyRoute = require("./routes/partyRoute.js")
 const orderRoute = require("./routes/orderRoute");
 const overviewRoute = require("./routes/overviewRoute");
+const notificationRoute = require("./routes/notificationRoute");
 const WebSocket = require('ws');
 const { handleConnection, sendMessage } = require('./websocketHandler');
 const admin = require("firebase-admin");
@@ -52,6 +53,7 @@ app.use('/api/conversations', conversationRoute);
 app.use('/api/party', partyRoute);
 app.use('/api/orders', orderRoute);
 app.use('/api/overview', overviewRoute);
+app.use('/api/notification', notificationRoute);
 
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);

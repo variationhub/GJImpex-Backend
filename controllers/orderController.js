@@ -2,6 +2,7 @@ const { OrderModel } = require('../models/orderModel');
 const DeviceModel = require('../models/deviceModel');
 const Product = require('../models/productModel');
 const Party = require('../models/partyModel');
+const Notification = require("../models/notificationModel");
 const { sendMessage } = require('../websocketHandler');
 const scheduleNotification = require('../services/notificationServices');
 
@@ -93,8 +94,15 @@ const createOrder = async (req, res) => {
     }));
 
     const newOrder = new OrderModel({ ...orderData, userId, createdBy, orderNumber });
+    const notification = new Notification({
+      title: `Order #${orderNumber} Created`,
+      body: `An order has been created with order number ${orderNumber} by ${orderData.companyName}.`,
+    });
 
-    await newOrder.save();
+    await Promise.all([
+      newOrder.save(),
+      notification.save()
+    ])
 
     await Promise.all(productData.map(async (product) => {
       await product.save();
@@ -374,7 +382,15 @@ const updateOrder = async (req, res) => {
     existingOrder.totalPrice = Number(orderData.totalPrice || 0);
     existingOrder.changed = true;
 
-    await existingOrder.save();
+    const notification = new Notification({
+      title: `Order #${existingOrder.orderNumber} Updated`,
+      body: `An order has been updated with order number ${existingOrder.orderNumber} by ${existingOrder.companyName}.`,
+    });
+
+    await Promise.all([
+      existingOrder.save(),
+      notification.save()
+    ])
     // sendMessageOrderController();
 
     await Promise.all(productData.map(async (product) => {
@@ -470,7 +486,14 @@ const updateOrderStatus = async (req, res) => {
     }
 
     order.status = newStatus;
-    await order.save();
+    const notification = new Notification({
+      title: `Order #${order.orderNumber} Updated`,
+      body: `Updated status of order number ${order.orderNumber} is ${newStatus}`,
+    });
+    await Promise.all([
+      order.save(),
+      notification.save()
+    ])
     sendMessageOrderController()
 
     res.json({
@@ -1085,7 +1108,14 @@ const deleteOrder = async (req, res) => {
       });
     }
 
-    await OrderModel.deleteOne({ id });
+    const notification = new Notification({
+      title: `Order #${orderData.orderNumber} Deleted`,
+      body: `An order has been deleted with order number ${orderData.orderNumber} by ${orderData.companyName}.`,
+    });
+    await Promise.all([
+      OrderModel.deleteOne({ id }),
+      notification.save()
+    ])
     sendMessageOrderController()
 
     return res.json({
