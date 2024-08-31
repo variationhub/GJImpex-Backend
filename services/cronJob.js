@@ -14,7 +14,7 @@ let start = async function() {
 let updateOrderStatusToPast = async function () {
     console.log("cron is running at", new Date());
     
-    await OrderModel.updateMany({status: "LR PENDING"}, {status: "PAST"})
+    await OrderModel.updateMany({status: "LR PENDING"}, {orderPast: true})
 }
 
 module.exports = {
