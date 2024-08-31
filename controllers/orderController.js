@@ -764,6 +764,7 @@ const getAllOrders = async (req, res) => {
           transportName: { $first: '$transportName' },
           companyName: { $first: '$companyName' },
           orderNumber: { $first: '$orderNumber' },
+          isDeleted: { $first: '$isDeleted' },
           billed: { $first: '$billed' },
           billNumber: { $first: '$billNumber' },
           dispatched: { $first: '$dispatched' },
@@ -889,6 +890,7 @@ const getOrderById = async (req, res) => {
           transportId: { $first: '$transport.id' },
           companyName: { $first: '$companyName' },
           orderNumber: { $first: '$orderNumber' },
+          isDeleted: { $first: '$isDeleted' },
           billed: { $first: '$billed' },
           billNumber: { $first: '$billNumber' },
           dispatched: { $first: '$dispatched' },
@@ -1010,6 +1012,7 @@ const filterOrdersByStatus = async (req, res) => {
           transportId: { $first: '$transport.id' },
           companyName: { $first: '$companyName' },
           orderNumber: { $first: '$orderNumber' },
+          isDeleted: { $first: '$isDeleted' },
           billed: { $first: '$billed' },
           billNumber: { $first: '$billNumber' },
           dispatched: { $first: '$dispatched' },
@@ -1101,7 +1104,13 @@ const deleteOrder = async (req, res) => {
         return;
       }));
 
-      await OrderModel.deleteOne({ id });
+      if(orderData.isDeleted) {
+        await OrderModel.deleteOne({ id });
+      } else {  
+        orderData.isDeleted = true; // Soft delete
+        await orderData.save(); 
+      }
+
       //sendMessageOrderController()
 
       return res.json({
@@ -1115,10 +1124,14 @@ const deleteOrder = async (req, res) => {
       title: `Order #${orderData.orderNumber} Deleted`,
       body: `An order has been deleted with order number ${orderData.orderNumber} by ${orderData.companyName}.`,
     });
-    await Promise.all([
-      OrderModel.deleteOne({ id }),
-      notification.save()
-    ])
+    await notification.save()
+
+    if(orderData.isDeleted) {
+      await OrderModel.deleteOne({ id });
+    } else {  
+      orderData.isDeleted = true; // Soft delete
+      await orderData.save(); 
+    }
     sendMessageOrderController()
 
     return res.json({
