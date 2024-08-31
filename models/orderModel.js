@@ -38,7 +38,6 @@ const productDetails = new mongoose.Schema({
     },
     dispatcherId:{
         type: String,
-        required: true,
         ref: 'User'
     }
 }, { versionKey: false })
