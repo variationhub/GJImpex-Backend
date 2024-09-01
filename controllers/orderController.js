@@ -730,11 +730,15 @@ const getAllOrders = async (req, res) => {
       {
         $addFields: {
           transportName: {
-            $cond: {
-              if: { $eq: ['$transportId', null] },
-              then: '$customTransport',
-              else: { $arrayElemAt: ['$transport.name', 0] }
-            }
+            $cond: [
+              {
+                $ifNull: ["$transportId", false]
+              },
+              {
+                $arrayElemAt: ["$transport.transportName", 0]
+              },
+              "$customTransport" 
+            ]
           }
         }
       },
@@ -863,7 +867,23 @@ const getOrderById = async (req, res) => {
         }
       },
       {
-        $unwind: '$transport' // Deconstructing the array field 'transport' to individual documents
+        $unwind: {
+          path: '$transport',
+          preserveNullAndEmptyArrays: true
+        },
+      },
+      {
+        $addFields: {
+          transportName: {
+            $cond: [
+              {
+                $ifNull: ["$transportId", false]
+              },
+              "$transport.transportName",
+              "$customTransport" 
+            ]
+          }
+        }
       },
       {
         $unwind: '$party' // Deconstructing the array field 'party' to individual documents
@@ -888,6 +908,7 @@ const getOrderById = async (req, res) => {
           id: { $first: '$id' },
           party: { $first: '$party' },
           transportId: { $first: '$transport.id' },
+          transportName: { $first: '$transportName' },
           companyName: { $first: '$companyName' },
           orderNumber: { $first: '$orderNumber' },
           isDeleted: { $first: '$isDeleted' },
@@ -982,7 +1003,23 @@ const filterOrdersByStatus = async (req, res) => {
         }
       },
       {
-        $unwind: '$transport' // Deconstructing the array field 'transport' to individual documents
+        $unwind: {
+          path: '$transport',
+          preserveNullAndEmptyArrays: true
+        },
+      },
+      {
+        $addFields: {
+          transportName: {
+            $cond: [
+              {
+                $ifNull: ["$transportId", false]
+              },
+              "$transport.transportName",
+              "$customTransport" 
+            ]
+          }
+        }
       },
       {
         $unwind: '$party' // Deconstructing the array field 'party' to individual documents
@@ -1010,6 +1047,7 @@ const filterOrdersByStatus = async (req, res) => {
           id: { $first: '$id' },
           party: { $first: '$party' },
           transportId: { $first: '$transport.id' },
+          transportName: { $first: '$transportName' },
           companyName: { $first: '$companyName' },
           orderNumber: { $first: '$orderNumber' },
           isDeleted: { $first: '$isDeleted' },
