@@ -37,7 +37,7 @@ const login = async (req, res) => {
         }
 
         if(user.isLoginAble == false) {
-            return res.status(401).json({
+            return res.status(200).json({
                 status: false,
                 data: null,
                 message: 'The user is currently deactive'
