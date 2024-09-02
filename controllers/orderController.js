@@ -81,12 +81,12 @@ const createOrder = async (req, res) => {
           product.pendingOrderStock += order.quantity
         }
 
-        if(!stockBelowMin && product.stock < product.minStock) { 
+        if (!stockBelowMin && product.stock < product.minStock) {
           const topic = "Stock Alert";
           const description = `${product.productName} stock is below the minimum stock level`;
           const devices = await DeviceModel.find({ userId });
           devices.forEach(device => {
-              scheduleNotification(device?.deviceToken, topic, description, Date.now());
+            scheduleNotification(device?.deviceToken, topic, description, Date.now());
           });
         }
 
@@ -137,6 +137,14 @@ const updateOrder = async (req, res) => {
         status: false,
         data: null,
         message: "Order not found"
+      });
+    }
+
+    if(orderData.status !== "BILLING"){
+      return res.status(400).json({
+        status: false,
+        data: null,
+        message: "Cannot update an order to a status other than BILLING."
       });
     }
 
@@ -391,7 +399,7 @@ const updateOrder = async (req, res) => {
       existingOrder.save(),
       notification.save()
     ])
-    // sendMessageOrderController();
+    sendMessageOrderController();
 
     await Promise.all(productData.map(async (product) => {
       await product.save();
@@ -559,128 +567,6 @@ const updateOrderDetails = async (req, res) => {
   }
 };
 
-// const getAllOrders = async (req, res) => {
-
-//   try {
-//     const orders = await OrderModel.aggregate([
-//       {
-//         $match: {
-//           status: { $ne: 'DONE' }
-//         }
-//       },
-//       {
-//         $lookup: {
-//           from: 'users', // Name of the collection you're joining with (users collection)
-//           localField: 'userId', // Field from OrderModel
-//           foreignField: 'id', // Field from User model
-//           as: 'user'
-//         }
-//       },
-//       {
-//         $lookup: {
-//           from: 'users', // Name of the collection you're joining with (users collection)
-//           localField: 'createdBy', // Field from OrderModel
-//           foreignField: 'id', // Field from User model
-//           as: 'createdBy'
-//         }
-//       },
-//       {
-//         $unwind: '$user' // Deconstructing the array field 'user' to individual documents
-//       },
-//       {
-//         $unwind: '$createdBy' // Deconstructing the array field 'user' to individual documents
-//       },
-//       {
-//         $lookup: {
-//           from: 'parties',
-//           localField: 'partyId',
-//           foreignField: 'id',
-//           as: 'party'
-//         }
-//       },
-//       {
-//         $lookup: {
-//           from: 'transports',
-//           localField: 'transportId',
-//           foreignField: 'id',
-//           as: 'transport'
-//         }
-//       },
-//       {
-//         $unwind: '$transport' // Deconstructing the array field 'transport' to individual documents
-//       },
-//       {
-//         $unwind: '$party' // Deconstructing the array field 'party' to individual documents
-//       },
-//       {
-//         $unwind: '$orders' // Deconstructing the array field 'orders' to individual documents
-//       },
-//       {
-//         $lookup: {
-//           from: 'products', // Name of the collection you're joining with (products collection)
-//           localField: 'orders.productId', // Field from OrderModel
-//           foreignField: 'id', // Field from Product model
-//           as: 'product'
-//         }
-//       },
-//       {
-//         $unwind: '$product' // Deconstructing the array field 'product' to individual documents
-//       },
-//       {
-//         $group: {
-//           _id: '$_id',
-//           id: { $first: '$id' },
-//           party: { $first: '$party' },
-//           transportId: { $first: '$transport.id' },
-//           companyName: { $first: '$companyName' },
-//           billed: { $first: '$billed' },
-//           billNumber: { $first: '$billNumber' },
-//           dispatched: { $first: '$dispatched' },
-//           priority: { $first: '$priority' },
-//           lrSent: { $first: '$lrSent' },
-//           changed: { $first: '$changed' },
-//           status: { $first: '$status' },
-//           freight: { $first: '$freight' },
-//           gst: { $first: '$gst' },
-//           gstPrice: { $first: '$gstPrice' },
-//           totalPrice: { $first: '$totalPrice' },
-//           confirmOrder: { $first: '$confirmOrder' },
-//           narration: { $first: '$narration' },
-//           createdBy: { $first: { id: '$createdBy.id', name: '$createdBy.name', nickName: '$createdBy.nickName' } },
-//           createdAt: { $first: '$createdAt' },
-//           user: { $first: { id: '$user.id', name: '$user.name', nickName: '$user.nickName' } },
-//           products: {
-//             $push: {
-//               id: '$product.id',
-//               productName: '$product.productName',
-//               productType: '$product.productType',
-//               quantity: '$orders.quantity',
-//               sellPrice: '$orders.sellPrice',
-//               done: '$orders.done',
-//               checked: '$orders.checked'
-//             }
-//           }
-//         }
-//       },
-//       {
-//         $sort: { createdAt: -1 }
-//       }
-//     ]);
-
-//     res.json({
-//       status: true,
-//       data: orders,
-//       message: "Order details retrieved successfully"
-//     });
-//   } catch (error) {
-//     res.status(200).json({
-//       status: false,
-//       data: null,
-//       message: error.message
-//     });
-//   }
-// };
-
 const getAllOrders = async (req, res) => {
   try {
     const orders = await OrderModel.aggregate([
@@ -737,7 +623,7 @@ const getAllOrders = async (req, res) => {
               {
                 $arrayElemAt: ["$transport.transportName", 0]
               },
-              "$customTransport" 
+              "$customTransport"
             ]
           }
         }
@@ -880,7 +766,7 @@ const getOrderById = async (req, res) => {
                 $ifNull: ["$transportId", false]
               },
               "$transport.transportName",
-              "$customTransport" 
+              "$customTransport"
             ]
           }
         }
@@ -1016,7 +902,7 @@ const filterOrdersByStatus = async (req, res) => {
                 $ifNull: ["$transportId", false]
               },
               "$transport.transportName",
-              "$customTransport" 
+              "$customTransport"
             ]
           }
         }
@@ -1142,14 +1028,14 @@ const deleteOrder = async (req, res) => {
         return;
       }));
 
-      if(orderData.isDeleted) {
+      if (orderData.isDeleted) {
         await OrderModel.deleteOne({ id });
-      } else {  
+      } else {
         orderData.isDeleted = true; // Soft delete
-        await orderData.save(); 
+        await orderData.save();
       }
 
-      //sendMessageOrderController()
+      sendMessageOrderController()
 
       return res.json({
         status: true,
@@ -1164,11 +1050,11 @@ const deleteOrder = async (req, res) => {
     });
     await notification.save()
 
-    if(orderData.isDeleted) {
+    if (orderData.isDeleted) {
       await OrderModel.deleteOne({ id });
-    } else {  
+    } else {
       orderData.isDeleted = true; // Soft delete
-      await orderData.save(); 
+      await orderData.save();
     }
     sendMessageOrderController()
 
