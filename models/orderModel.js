@@ -38,7 +38,6 @@ const productDetails = new mongoose.Schema({
     },
     dispatcherId:{
         type: String,
-        required: true,
         ref: 'User'
     }
 }, { versionKey: false })
@@ -128,7 +127,7 @@ const orderModel = new mongoose.Schema({
     priority:{
         type:String,
         trim:true,
-        default:"P0"
+        default:"None"
     },
     narration: {
         type: String,

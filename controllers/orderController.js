@@ -1,7 +1,11 @@
 const { OrderModel } = require('../models/orderModel');
+const DeviceModel = require('../models/deviceModel');
 const Product = require('../models/productModel');
 const Party = require('../models/partyModel');
+const Notification = require("../models/notificationModel");
 const { sendMessage } = require('../websocketHandler');
+const scheduleNotification = require('../services/notificationServices');
+
 
 function sendMessageOrderController() {
   const message = {
@@ -18,6 +22,8 @@ const createOrder = async (req, res) => {
     const createdBy = req.user?.id;
     const productData = await Product.find({ id: { $in: orderData.orders.map(item => item.productId) } });
     const { userId } = await Party.findOne({ id: orderData.partyId }, { userId: 1 });
+    let lastOrder = await OrderModel.findOne().sort({ createdAt: -1 });
+    let orderNumber = ((lastOrder && lastOrder.orderNumber ? lastOrder.orderNumber : 0) % 9999) + 1;
 
     await Promise.all(orderData.orders.map(async (order, index) => {
 
@@ -58,7 +64,8 @@ const createOrder = async (req, res) => {
         orderData.orders[index] = {
           ...order,
           buyPrice: (subTotalPrice / order.quantity).toFixed(2),
-          buyPriceHistory: orderProductHistory
+          buyPriceHistory: orderProductHistory,
+
         }
         subTotalPrice = 0;
 
@@ -66,18 +73,36 @@ const createOrder = async (req, res) => {
           throw new Error(`Product with ID ${order.productId} not found.`);
         }
 
+        let stockBelowMin = product.stock < product.minStock;
+
         if (orderData.confirmOrder) {
           product.stock -= order.quantity;
         } else {
           product.pendingOrderStock += order.quantity
         }
+
+        if (!stockBelowMin && product.stock < product.minStock) {
+          const topic = "Stock Alert";
+          const description = `${product.productName} stock is below the minimum stock level`;
+          const devices = await DeviceModel.find({ userId });
+          devices.forEach(device => {
+            scheduleNotification(device?.deviceToken, topic, description, Date.now());
+          });
+        }
+
       }
     }));
 
+    const newOrder = new OrderModel({ ...orderData, userId, createdBy, orderNumber });
+    const notification = new Notification({
+      title: `Order #${orderNumber} Created`,
+      body: `An order has been created with order number ${orderNumber} by ${orderData.companyName}.`,
+    });
 
-    const newOrder = new OrderModel({ ...orderData, userId, createdBy });
-
-    await newOrder.save();
+    await Promise.all([
+      newOrder.save(),
+      notification.save()
+    ])
 
     await Promise.all(productData.map(async (product) => {
       await product.save();
@@ -112,6 +137,14 @@ const updateOrder = async (req, res) => {
         status: false,
         data: null,
         message: "Order not found"
+      });
+    }
+
+    if(orderData.status !== "BILLING"){
+      return res.status(400).json({
+        status: false,
+        data: null,
+        message: "Cannot update an order to a status other than BILLING."
       });
     }
 
@@ -357,8 +390,16 @@ const updateOrder = async (req, res) => {
     existingOrder.totalPrice = Number(orderData.totalPrice || 0);
     existingOrder.changed = true;
 
-    await existingOrder.save();
-    // sendMessageOrderController();
+    const notification = new Notification({
+      title: `Order #${existingOrder.orderNumber} Updated`,
+      body: `An order has been updated with order number ${existingOrder.orderNumber} by ${existingOrder.companyName}.`,
+    });
+
+    await Promise.all([
+      existingOrder.save(),
+      notification.save()
+    ])
+    sendMessageOrderController();
 
     await Promise.all(productData.map(async (product) => {
       await product.save();
@@ -453,7 +494,14 @@ const updateOrderStatus = async (req, res) => {
     }
 
     order.status = newStatus;
-    await order.save();
+    const notification = new Notification({
+      title: `Order #${order.orderNumber} Updated`,
+      body: `Updated status of order number ${order.orderNumber} is ${newStatus}`,
+    });
+    await Promise.all([
+      order.save(),
+      notification.save()
+    ])
     sendMessageOrderController()
 
     res.json({
@@ -519,128 +567,6 @@ const updateOrderDetails = async (req, res) => {
   }
 };
 
-// const getAllOrders = async (req, res) => {
-
-//   try {
-//     const orders = await OrderModel.aggregate([
-//       {
-//         $match: {
-//           status: { $ne: 'DONE' }
-//         }
-//       },
-//       {
-//         $lookup: {
-//           from: 'users', // Name of the collection you're joining with (users collection)
-//           localField: 'userId', // Field from OrderModel
-//           foreignField: 'id', // Field from User model
-//           as: 'user'
-//         }
-//       },
-//       {
-//         $lookup: {
-//           from: 'users', // Name of the collection you're joining with (users collection)
-//           localField: 'createdBy', // Field from OrderModel
-//           foreignField: 'id', // Field from User model
-//           as: 'createdBy'
-//         }
-//       },
-//       {
-//         $unwind: '$user' // Deconstructing the array field 'user' to individual documents
-//       },
-//       {
-//         $unwind: '$createdBy' // Deconstructing the array field 'user' to individual documents
-//       },
-//       {
-//         $lookup: {
-//           from: 'parties',
-//           localField: 'partyId',
-//           foreignField: 'id',
-//           as: 'party'
-//         }
-//       },
-//       {
-//         $lookup: {
-//           from: 'transports',
-//           localField: 'transportId',
-//           foreignField: 'id',
-//           as: 'transport'
-//         }
-//       },
-//       {
-//         $unwind: '$transport' // Deconstructing the array field 'transport' to individual documents
-//       },
-//       {
-//         $unwind: '$party' // Deconstructing the array field 'party' to individual documents
-//       },
-//       {
-//         $unwind: '$orders' // Deconstructing the array field 'orders' to individual documents
-//       },
-//       {
-//         $lookup: {
-//           from: 'products', // Name of the collection you're joining with (products collection)
-//           localField: 'orders.productId', // Field from OrderModel
-//           foreignField: 'id', // Field from Product model
-//           as: 'product'
-//         }
-//       },
-//       {
-//         $unwind: '$product' // Deconstructing the array field 'product' to individual documents
-//       },
-//       {
-//         $group: {
-//           _id: '$_id',
-//           id: { $first: '$id' },
-//           party: { $first: '$party' },
-//           transportId: { $first: '$transport.id' },
-//           companyName: { $first: '$companyName' },
-//           billed: { $first: '$billed' },
-//           billNumber: { $first: '$billNumber' },
-//           dispatched: { $first: '$dispatched' },
-//           priority: { $first: '$priority' },
-//           lrSent: { $first: '$lrSent' },
-//           changed: { $first: '$changed' },
-//           status: { $first: '$status' },
-//           freight: { $first: '$freight' },
-//           gst: { $first: '$gst' },
-//           gstPrice: { $first: '$gstPrice' },
-//           totalPrice: { $first: '$totalPrice' },
-//           confirmOrder: { $first: '$confirmOrder' },
-//           narration: { $first: '$narration' },
-//           createdBy: { $first: { id: '$createdBy.id', name: '$createdBy.name', nickName: '$createdBy.nickName' } },
-//           createdAt: { $first: '$createdAt' },
-//           user: { $first: { id: '$user.id', name: '$user.name', nickName: '$user.nickName' } },
-//           products: {
-//             $push: {
-//               id: '$product.id',
-//               productName: '$product.productName',
-//               productType: '$product.productType',
-//               quantity: '$orders.quantity',
-//               sellPrice: '$orders.sellPrice',
-//               done: '$orders.done',
-//               checked: '$orders.checked'
-//             }
-//           }
-//         }
-//       },
-//       {
-//         $sort: { createdAt: -1 }
-//       }
-//     ]);
-
-//     res.json({
-//       status: true,
-//       data: orders,
-//       message: "Order details retrieved successfully"
-//     });
-//   } catch (error) {
-//     res.status(200).json({
-//       status: false,
-//       data: null,
-//       message: error.message
-//     });
-//   }
-// };
-
 const getAllOrders = async (req, res) => {
   try {
     const orders = await OrderModel.aggregate([
@@ -690,11 +616,15 @@ const getAllOrders = async (req, res) => {
       {
         $addFields: {
           transportName: {
-            $cond: {
-              if: { $eq: ['$transportId', null] },
-              then: '$customTransport',
-              else: { $arrayElemAt: ['$transport.name', 0] }
-            }
+            $cond: [
+              {
+                $ifNull: ["$transportId", false]
+              },
+              {
+                $arrayElemAt: ["$transport.transportName", 0]
+              },
+              "$customTransport"
+            ]
           }
         }
       },
@@ -723,6 +653,8 @@ const getAllOrders = async (req, res) => {
           transportId: { $first: '$transportId' },
           transportName: { $first: '$transportName' },
           companyName: { $first: '$companyName' },
+          orderNumber: { $first: '$orderNumber' },
+          isDeleted: { $first: '$isDeleted' },
           billed: { $first: '$billed' },
           billNumber: { $first: '$billNumber' },
           dispatched: { $first: '$dispatched' },
@@ -821,7 +753,23 @@ const getOrderById = async (req, res) => {
         }
       },
       {
-        $unwind: '$transport' // Deconstructing the array field 'transport' to individual documents
+        $unwind: {
+          path: '$transport',
+          preserveNullAndEmptyArrays: true
+        },
+      },
+      {
+        $addFields: {
+          transportName: {
+            $cond: [
+              {
+                $ifNull: ["$transportId", false]
+              },
+              "$transport.transportName",
+              "$customTransport"
+            ]
+          }
+        }
       },
       {
         $unwind: '$party' // Deconstructing the array field 'party' to individual documents
@@ -846,7 +794,10 @@ const getOrderById = async (req, res) => {
           id: { $first: '$id' },
           party: { $first: '$party' },
           transportId: { $first: '$transport.id' },
+          transportName: { $first: '$transportName' },
           companyName: { $first: '$companyName' },
+          orderNumber: { $first: '$orderNumber' },
+          isDeleted: { $first: '$isDeleted' },
           billed: { $first: '$billed' },
           billNumber: { $first: '$billNumber' },
           dispatched: { $first: '$dispatched' },
@@ -938,7 +889,23 @@ const filterOrdersByStatus = async (req, res) => {
         }
       },
       {
-        $unwind: '$transport' // Deconstructing the array field 'transport' to individual documents
+        $unwind: {
+          path: '$transport',
+          preserveNullAndEmptyArrays: true
+        },
+      },
+      {
+        $addFields: {
+          transportName: {
+            $cond: [
+              {
+                $ifNull: ["$transportId", false]
+              },
+              "$transport.transportName",
+              "$customTransport"
+            ]
+          }
+        }
       },
       {
         $unwind: '$party' // Deconstructing the array field 'party' to individual documents
@@ -966,7 +933,10 @@ const filterOrdersByStatus = async (req, res) => {
           id: { $first: '$id' },
           party: { $first: '$party' },
           transportId: { $first: '$transport.id' },
+          transportName: { $first: '$transportName' },
           companyName: { $first: '$companyName' },
+          orderNumber: { $first: '$orderNumber' },
+          isDeleted: { $first: '$isDeleted' },
           billed: { $first: '$billed' },
           billNumber: { $first: '$billNumber' },
           dispatched: { $first: '$dispatched' },
@@ -1058,8 +1028,14 @@ const deleteOrder = async (req, res) => {
         return;
       }));
 
-      await OrderModel.deleteOne({ id });
-      //sendMessageOrderController()
+      if (orderData.isDeleted) {
+        await OrderModel.deleteOne({ id });
+      } else {
+        orderData.isDeleted = true; // Soft delete
+        await orderData.save();
+      }
+
+      sendMessageOrderController()
 
       return res.json({
         status: true,
@@ -1068,7 +1044,18 @@ const deleteOrder = async (req, res) => {
       });
     }
 
-    await OrderModel.deleteOne({ id });
+    const notification = new Notification({
+      title: `Order #${orderData.orderNumber} Deleted`,
+      body: `An order has been deleted with order number ${orderData.orderNumber} by ${orderData.companyName}.`,
+    });
+    await notification.save()
+
+    if (orderData.isDeleted) {
+      await OrderModel.deleteOne({ id });
+    } else {
+      orderData.isDeleted = true; // Soft delete
+      await orderData.save();
+    }
     sendMessageOrderController()
 
     return res.json({

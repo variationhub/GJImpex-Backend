@@ -55,6 +55,10 @@ const userModel = new mongoose.Schema({
         required: true,
         minlength: 6
     },
+    isLoginAble: {
+        type: Boolean,
+        default: true
+    },
     createdAt: {
         type: Date,
         default: Date.now

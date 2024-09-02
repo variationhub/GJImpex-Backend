@@ -11,13 +11,17 @@ function handleConnection(ws) {
     });
 }
 
-function sendMessage(message) {
+function sendMessage(message = {}) {
     clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify(message));
         }
     });
 }
+
+setInterval(() => {
+    sendMessage()
+}, 25000)
 
 module.exports.handleConnection = handleConnection;
 module.exports.sendMessage = sendMessage;

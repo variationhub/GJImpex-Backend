@@ -12,10 +12,12 @@ const conversationRoute = require("./routes/conversationRoute")
 const partyRoute = require("./routes/partyRoute.js")
 const orderRoute = require("./routes/orderRoute");
 const overviewRoute = require("./routes/overviewRoute");
+const notificationRoute = require("./routes/notificationRoute");
 const WebSocket = require('ws');
 const { handleConnection, sendMessage } = require('./websocketHandler');
 const admin = require("firebase-admin");
 const serviceAccount = require("./gj-impex.json");
+const cron = require('./services/cronJob.js')
 
 const wss = new WebSocket.Server({ port: 8080 });
 
@@ -28,7 +30,7 @@ app.use(cors());
 app.use(morgan('tiny'));
 app.use(express.json());
 
-mongoose.connect(process.env.MONGODB_URL).then((connection) => {
+mongoose.connect(process.env.MONGODB_URL_DEV).then((connection) => {
     console.log("DB connected");
 }).catch((err) => {
     console.error(err)
@@ -52,6 +54,9 @@ app.use('/api/conversations', conversationRoute);
 app.use('/api/party', partyRoute);
 app.use('/api/orders', orderRoute);
 app.use('/api/overview', overviewRoute);
+app.use('/api/notification', notificationRoute);
+
+cron.start();
 
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
