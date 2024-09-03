@@ -59,6 +59,10 @@ const userModel = new mongoose.Schema({
         type: Boolean,
         default: true
     },
+    priority:{
+        type:String,
+        trim:true,
+    },
     createdAt: {
         type: Date,
         default: Date.now

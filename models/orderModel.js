@@ -29,12 +29,12 @@ const productDetails = new mongoose.Schema({
         default: []
     },
     done: {
-        type: Boolean,
-        default: false
+        type: String,
+        default: ""
     },
-    checked:{
-        type: Boolean,
-        default: false
+    checked: {
+        type: String,
+        default: ""
     },
     dispatcherId:{
         type: String,

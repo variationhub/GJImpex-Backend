@@ -510,7 +510,8 @@ const updateOrderStatus = async (req, res) => {
 
 const updateOrderDetails = async (req, res) => {
   const { orderId } = req.params;
-  const status = req.query.status || "";
+  const checked = req.query.checked || "";
+  const done = req.query.done || "";
   const productId = req.query.productId
 
   console.log(orderId, status, productId);
@@ -526,16 +527,16 @@ const updateOrderDetails = async (req, res) => {
     }
     const singleOrder = order.orders.find(item => item.productId === productId);
     if (singleOrder) {
-      if (status === "false") {
-        singleOrder.checked = false;
-        singleOrder.done = false;
+      if (checked === "") {
+        singleOrder.checked = "";
+        singleOrder.done = "";
       }
-      else if (status && singleOrder.checked) {
-        singleOrder.done = status;
+      else if (done != "") {
+        singleOrder.done = done;
       }
-      else if (status) {
-        singleOrder.checked = status;
-        singleOrder.done = false;
+      else if (checked != "") {
+        singleOrder.checked = checked;
+        singleOrder.done = "";
       }
       await order.save();
     }
