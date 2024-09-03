@@ -779,6 +779,34 @@ const getOrderById = async (req, res) => {
         $unwind: '$product' // Deconstructing the array field 'product' to individual documents
       },
       {
+        $lookup: {
+          from: 'users', // Name of the collection you're joining with (users collection)
+          localField: 'orders.checked', // Field from OrderModel
+          foreignField: 'id', // Field from User model
+          as: 'checkedBy'
+        }
+      },
+      {
+        $unwind: {
+          path: '$checkedBy', // Deconstructing the array field 'product' to individual documents
+          preserveNullAndEmptyArrays: true
+        },
+      },
+      {
+        $lookup: {
+          from: 'users', // Name of the collection you're joining with (users collection)
+          localField: 'orders.done', // Field from OrderModel
+          foreignField: 'id', // Field from User model
+          as: 'doneBy'
+        }
+      },
+      {
+        $unwind: {
+          path: '$doneBy', // Deconstructing the array field 'product' to individual documents
+          preserveNullAndEmptyArrays: true
+        },
+      },
+      {
         $group: {
           _id: '$_id',
           id: { $first: '$id' },
@@ -811,8 +839,12 @@ const getOrderById = async (req, res) => {
               productType: '$product.productType',
               quantity: '$orders.quantity',
               sellPrice: '$orders.sellPrice',
+              checked: '$orders.checked',
+              checkedUserId: '$checkedBy.id',
+              checkPriority: '$checkedBy.priority',
               done: '$orders.done',
-              checked: '$orders.checked'
+              doneUserId: '$doneBy.id',
+              donePriority: '$doneBy.priority',
             }
           }
         }
