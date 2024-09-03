@@ -514,7 +514,6 @@ const updateOrderDetails = async (req, res) => {
   const done = req.query.done || "";
   const productId = req.query.productId
 
-  console.log(orderId, status, productId);
   try {
     const order = await OrderModel.findOne({ id: orderId });
 
