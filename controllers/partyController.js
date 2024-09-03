@@ -1,5 +1,6 @@
 const Party = require('../models/partyModel');
 const { sendMessage } = require('../websocketHandler');
+const { createNotification } = require("./notificationController");
 
 function sendMessagePartyController() {
     const message = {
@@ -22,7 +23,11 @@ const createParty = async (req, res) => {
             });
         }
         const party = await Party.create(body);
-        sendMessagePartyController()
+        sendMessagePartyController();
+        createNotification(
+            "Party Created",
+            `Party has been created with party name ${body.partyName}.`
+        );
         return res.status(201).json({
             status: true,
             data: party,
@@ -70,7 +75,11 @@ const updateParty = async (req, res) => {
         });
 
         await existingParty.save();
-        sendMessagePartyController()
+        sendMessagePartyController();
+        createNotification(
+            "Party Updated",
+            `Party has been updated with party name ${existingParty.partyName}.`
+        );
         return res.json({
             status: true,
             data: existingParty,
@@ -177,7 +186,11 @@ const deleteParty = async (req, res) => {
                 message: "Party not found"
             });
         }
-        sendMessagePartyController()
+        sendMessagePartyController();
+        createNotification(
+            "Party Deleted",
+            `Party has been deleted with party name ${data.partyName}.`
+        );
         return res.json({
             status: true,
             data: data,

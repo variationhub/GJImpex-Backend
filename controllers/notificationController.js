@@ -17,6 +17,20 @@ const getAllNotification = async (req, res) => {
     }
 }
 
+const createNotification = async (title = "", body = "") => {
+    try {
+        const notification = new Notification({
+            title,
+            body,
+        });
+        await notification.save();
+    } catch (error) {
+        console.error('Error saving notification:', error);
+    }
+};
+
+
 module.exports = {
     getAllNotification,
+    createNotification
 }
