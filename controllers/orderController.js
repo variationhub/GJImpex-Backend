@@ -126,8 +126,9 @@ const updateOrder = async (req, res) => {
 
     const { id } = req.params;
     const orderData = req.body;
+    
     const existingOrder = await OrderModel.findOne({ id });
-
+    
     if (!existingOrder) {
       return res.status(404).json({
         status: false,
@@ -136,7 +137,7 @@ const updateOrder = async (req, res) => {
       });
     }
 
-    if(orderData.status !== "BILLING"){
+    if(existingOrder?.status !== "BILLING"){
       return res.status(400).json({
         status: false,
         data: null,
@@ -146,6 +147,7 @@ const updateOrder = async (req, res) => {
 
     const productData = await Product.find({ id: { $in: [...orderData.orders.map(item => item.productId), ...existingOrder.orders.map(item => item.productId)] } });
     const newAddedProduct = orderData.orders.filter(item => !existingOrder.orders.map(i => i.productId).includes(item.productId));
+
 
     if (existingOrder.confirmOrder && !orderData.confirmOrder) {
       await Promise.all(existingOrder.orders.map(async (orderOldData) => {
@@ -643,6 +645,7 @@ const getAllOrders = async (req, res) => {
           transportName: { $first: '$transportName' },
           companyName: { $first: '$companyName' },
           orderNumber: { $first: '$orderNumber' },
+          orderPast:{ $first: '$orderPast' },
           isDeleted: { $first: '$isDeleted' },
           billed: { $first: '$billed' },
           billNumber: { $first: '$billNumber' },
@@ -692,6 +695,142 @@ const getAllOrders = async (req, res) => {
   }
 };
 
+const getAllDeletedOrders = async (req, res) => {
+  try {
+    const orders = await OrderModel.aggregate([
+      {
+        $match: {
+          isDeleted: true
+        }
+      },
+      {
+        $lookup: {
+          from: 'users', // Name of the collection you're joining with (users collection)
+          localField: 'userId', // Field from OrderModel
+          foreignField: 'id', // Field from User model
+          as: 'user'
+        }
+      },
+      {
+        $lookup: {
+          from: 'users', // Name of the collection you're joining with (users collection)
+          localField: 'createdBy', // Field from OrderModel
+          foreignField: 'id', // Field from User model
+          as: 'createdBy'
+        }
+      },
+      {
+        $unwind: '$user' // Deconstructing the array field 'user' to individual documents
+      },
+      {
+        $unwind: '$createdBy' // Deconstructing the array field 'user' to individual documents
+      },
+      {
+        $lookup: {
+          from: 'parties',
+          localField: 'partyId',
+          foreignField: 'id',
+          as: 'party'
+        }
+      },
+      {
+        $lookup: {
+          from: 'transports',
+          localField: 'transportId',
+          foreignField: 'id',
+          as: 'transport'
+        }
+      },
+      {
+        $addFields: {
+          transportName: {
+            $cond: [
+              {
+                $ifNull: ["$transportId", false]
+              },
+              {
+                $arrayElemAt: ["$transport.transportName", 0]
+              },
+              "$customTransport"
+            ]
+          }
+        }
+      },
+      {
+        $unwind: '$party' // Deconstructing the array field 'party' to individual documents
+      },
+      {
+        $unwind: '$orders' // Deconstructing the array field 'orders' to individual documents
+      },
+      {
+        $lookup: {
+          from: 'products', // Name of the collection you're joining with (products collection)
+          localField: 'orders.productId', // Field from OrderModel
+          foreignField: 'id', // Field from Product model
+          as: 'product'
+        }
+      },
+      {
+        $unwind: '$product' // Deconstructing the array field 'product' to individual documents
+      },
+      {
+        $group: {
+          _id: '$_id',
+          id: { $first: '$id' },
+          party: { $first: '$party' },
+          transportId: { $first: '$transportId' },
+          transportName: { $first: '$transportName' },
+          companyName: { $first: '$companyName' },
+          orderNumber: { $first: '$orderNumber' },
+          orderPast:{ $first: '$orderPast' },
+          isDeleted: { $first: '$isDeleted' },
+          billed: { $first: '$billed' },
+          billNumber: { $first: '$billNumber' },
+          dispatched: { $first: '$dispatched' },
+          priority: { $first: '$priority' },
+          lrSent: { $first: '$lrSent' },
+          changed: { $first: '$changed' },
+          status: { $first: '$status' },
+          freight: { $first: '$freight' },
+          gst: { $first: '$gst' },
+          gstPrice: { $first: '$gstPrice' },
+          totalPrice: { $first: '$totalPrice' },
+          confirmOrder: { $first: '$confirmOrder' },
+          narration: { $first: '$narration' },
+          createdBy: { $first: { id: '$createdBy.id', name: '$createdBy.name', nickName: '$createdBy.nickName' } },
+          createdAt: { $first: '$createdAt' },
+          user: { $first: { id: '$user.id', name: '$user.name', nickName: '$user.nickName' } },
+          products: {
+            $push: {
+              id: '$product.id',
+              productName: '$product.productName',
+              productType: '$product.productType',
+              quantity: '$orders.quantity',
+              sellPrice: '$orders.sellPrice',
+              done: '$orders.done',
+              checked: '$orders.checked'
+            }
+          }
+        }
+      },
+      {
+        $sort: { createdAt: -1 }
+      }
+    ]);
+
+    res.json({
+      status: true,
+      data: orders,
+      message: "Order details retrieved successfully"
+    });
+  } catch (error) {
+    res.status(200).json({
+      status: false,
+      data: null,
+      message: error.message
+    });
+  }
+};
 
 // Get Order by ID
 const getOrderById = async (req, res) => {
@@ -814,6 +953,7 @@ const getOrderById = async (req, res) => {
           transportName: { $first: '$transportName' },
           companyName: { $first: '$companyName' },
           orderNumber: { $first: '$orderNumber' },
+          orderPast:{ $first: '$orderPast' },
           isDeleted: { $first: '$isDeleted' },
           billed: { $first: '$billed' },
           billNumber: { $first: '$billNumber' },
@@ -882,7 +1022,8 @@ const filterOrdersByStatus = async (req, res) => {
     const order = await OrderModel.aggregate([
       {
         $match: {
-          status
+          status,
+          isDeleted: false
         }
       },
       {
@@ -1102,5 +1243,6 @@ module.exports = {
   filterOrdersByStatus,
   deleteOrder,
   updateOrderStatus,
-  updateOrderDetails
+  updateOrderDetails,
+  getAllDeletedOrders
 };
