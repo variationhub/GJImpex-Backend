@@ -10,7 +10,7 @@ const getProfit = async (req, res) => {
 
         let query = { status: 'DONE', }
         if (from && to) {
-            query = { ...query, dispatched: { $gte: fromDate, $lte: toDate } }
+            query = { ...query, dispatchDate: { $gte: fromDate, $lte: toDate } }
         }
 
         const overviewWithProfitMetrics = await OrderModel.aggregate([
@@ -101,7 +101,7 @@ const getDailyReport = async (req, res) => {
             {
                 $match: {
                     status: "DONE",
-                    dispatched: { $gte: fromDate, $lte: toDate }
+                    dispatchDate: { $gte: fromDate, $lte: toDate }
                 }
             },
             {
