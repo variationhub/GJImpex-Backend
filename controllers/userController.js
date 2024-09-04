@@ -3,6 +3,7 @@ const { userEnum } = require("../contanst/data");
 const User = require("../models/userModel");
 const bcrypt = require('bcrypt');
 const { sendMessage } = require("../websocketHandler");
+const { createNotification } = require("./notificationController");
 
 function sendMessageUserController() {
   const message = {
@@ -75,9 +76,12 @@ const createUser = async (req, res) => {
     // Create the user if all checks pass
     const user = await User.create(userData);
 
-    // main("dhruvsuhagiya111@gmail.com").catch(err => console.log(err));
+    createNotification(
+      "User Created",
+      `A new user named "${userData.name}" has been created.`
+    );
 
-    sendMessageUserController()
+    sendMessageUserController();
     return res.status(201).json({
       status: true,
       data: user,
@@ -92,6 +96,7 @@ const createUser = async (req, res) => {
     });
   }
 };
+
 
 // Update User
 const updateUser = async (req, res) => {
@@ -143,7 +148,12 @@ const updateUser = async (req, res) => {
     Object.assign(existingUser, updateData);
     await existingUser.save();
 
-    sendMessageUserController()
+    createNotification(
+      "User Updated",
+      `User with name "${existingUser.name}" has been updated.`
+    );
+
+    sendMessageUserController();
     return res.status(200).json({
       status: true,
       data: existingUser,
@@ -217,12 +227,17 @@ const deleteUser = async (req, res) => {
       });
     }
 
-    sendMessageUserController()
+    createNotification(
+      "User Deleted",
+      `User with name "${deletedUser.name}" has been deleted.`
+    );
+
+    sendMessageUserController();
 
     res.json({
       status: true,
       data: deletedUser,
-      message: "User delete successfully"
+      message: "User deleted successfully"
     });
   } catch (error) {
     res.status(200).json({
@@ -232,6 +247,7 @@ const deleteUser = async (req, res) => {
     });
   }
 };
+
 
 const changePassword = async (req, res) => {
   try {

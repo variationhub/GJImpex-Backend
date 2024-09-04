@@ -1,5 +1,6 @@
 const Product = require('../models/productModel');
 const { sendMessage } = require('../websocketHandler');
+const { createNotification } = require("./notificationController");
 
 function sendMessageProductController() {
   const message = {
@@ -47,7 +48,13 @@ const createProduct = async (req, res) => {
     }
 
     const product = await Product.create({ ...productData, productPriceHistory: req.body.productPriceHistory.map(value => ({ ...value, userId })), stock });
-    sendMessageProductController()
+    
+    createNotification(
+      "Product Created",
+      `Product has been created with product name ${productData.productName}.`
+    );
+
+    sendMessageProductController();
     res.status(201).json({
       status: true,
       data: product,
@@ -82,7 +89,13 @@ const updateProduct = async (req, res) => {
     });
 
     await product.save();
-    sendMessageProductController()
+
+    createNotification(
+      "Product Updated",
+      `Product has been updated with product name ${product.productName}.`
+    );
+
+    sendMessageProductController();
     return res.json({
       status: true,
       data: product,
@@ -132,10 +145,16 @@ const updateProductStock = async (req, res) => {
     }
 
     product.stock = stock;
-    product.addedStock = stock.stock
+    product.addedStock = stock.stock;
     product.productPriceHistory = [...product.productPriceHistory, ...updateData.map(value => ({ ...value, userId }))]
     await product.save();
-    sendMessageProductController()
+
+    createNotification(
+      "Product Stock Updated",
+      `Product stock has been updated for product name ${product.productName}.`
+    );
+
+    sendMessageProductController();
     return res.json({
       status: true,
       data: product,
@@ -336,32 +355,37 @@ const updateProductUpdate = async (req, res) => {
 
     const product = await Product.findOne({ id });
 
-    const data = product?.productPriceHistory?.find(value => value.id === stockId)
+    const data = product?.productPriceHistory?.find(value => value.id === stockId);
 
-    product.stock -= data.stock
+    product.stock -= data.stock;
 
     data.stock = stock;
     data.addedStock = stock;
     data.price = price;
 
-    product.stock += stock
+    product.stock += stock;
 
     await product.save();
-    sendMessageProductController()
+
+    createNotification(
+      "Product Stock Updated",
+      `Product stock has been updated for product name ${product.productName}.`
+    );
+
+    sendMessageProductController();
     return res.json({
       status: true,
       data: product,
       message: "Product stock updated successfully"
     });
-  }
-  catch (error) {
+  } catch (error) {
     return res.status(200).json({
       status: false,
       data: null,
       message: error.message
     });
   }
-}
+};
 
 const deleteProductStock = async (req, res) => {
   const { id, stockId } = req.params;
@@ -369,28 +393,34 @@ const deleteProductStock = async (req, res) => {
   try {
     const product = await Product.findOne({ id });
 
-    const data = product?.productPriceHistory?.find(value => value.id === stockId)
-    const products = product?.productPriceHistory?.filter(value => value.id !== stockId)
+    const data = product?.productPriceHistory?.find(value => value.id === stockId);
+    const products = product?.productPriceHistory?.filter(value => value.id !== stockId);
 
     product.stock = product.stock - data.stock
     product.productPriceHistory = products
 
     await product.save();
-    sendMessageProductController()
+
+    createNotification(
+      "Product Stock Deleted",
+      `Product stock has been deleted for product name ${product.productName}.`
+    );
+
+    sendMessageProductController();
     return res.json({
       status: true,
       data: product,
-      message: "Product stock delete successfully"
+      message: "Product stock deleted successfully"
     });
-  }
-  catch (error) {
+  } catch (error) {
     return res.status(200).json({
       status: false,
       data: null,
       message: error.message
     });
   }
-}
+};
+
 const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
@@ -404,11 +434,17 @@ const deleteProduct = async (req, res) => {
         message: "Product not found"
       });
     }
-    sendMessageProductController()
+
+    createNotification(
+      "Product Deleted",
+      `Product with name ${deletedProduct.productName} has been deleted.`
+    );
+
+    sendMessageProductController();
     res.json({
       status: true,
       data: deletedProduct,
-      message: "Product delete successfully"
+      message: "Product deleted successfully"
     });
   } catch (error) {
     res.status(200).json({

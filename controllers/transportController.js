@@ -1,5 +1,6 @@
 const Transport = require("../models/transportModel");
 const { sendMessage } = require("../websocketHandler");
+const { createNotification } = require("./notificationController");
 
 function sendMessageTransportController() {
   const message = {
@@ -31,7 +32,14 @@ const createTransport = async (req, res) => {
     }
 
     const transport = await Transport.create(body);
-    sendMessageTransportController()
+
+    createNotification(
+      "Transport Created",
+      `A new transport named "${body.transportName}" has been created.`
+    );
+
+    sendMessageTransportController();
+
     res.status(201).json({
       status: true,
       data: transport,
@@ -71,7 +79,14 @@ const updateTransport = async (req, res) => {
     });
 
     await existingTransport.save();
-    sendMessageTransportController()
+
+    createNotification(
+      "Transport Updated",
+      `Transport with name "${existingTransport.transportName}" has been updated.`
+    );
+
+    sendMessageTransportController();
+
     return res.status(200).json({
       status: true,
       data: existingTransport,
@@ -79,10 +94,9 @@ const updateTransport = async (req, res) => {
     });
 
   } catch (error) {
-    return internalServerError(res)
+    return internalServerError(res);
   }
 };
-
 
 
 const getAllTransport = async (req, res) => {
@@ -131,16 +145,24 @@ const deleteTransport = async (req, res) => {
         message: "Transport not found"
       });
     }
-    sendMessageTransportController()
+
+    createNotification(
+      "Transport Deleted",
+      `Transport with name "${data.transportName}" has been deleted.`
+    );
+
+    sendMessageTransportController();
+
     return res.json({
       status: true,
       data: data,
       message: "Transport deleted successfully"
     });
   } catch (error) {
-    return internalServerError(res)
+    return internalServerError(res);
   }
 };
+
 
 module.exports = {
   createTransport,

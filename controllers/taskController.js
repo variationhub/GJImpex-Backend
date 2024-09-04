@@ -4,10 +4,10 @@ const IdTracking = require('../models/idTrakingModel');
 const { taskTypeEnum } = require('../contanst/data');
 const scheduleNotification = require('../services/notificationServices');
 const conversationModel = require('../models/conversationModel');
+const { createNotification } = require("./notificationController");
 
 const createTask = async (req, res) => {
-    const userId = req.user.id
-
+    const userId = req.user.id;
     const { topic, description, type, assignTo, timeSent = Date.now() } = req.body;
 
     if (!taskTypeEnum.includes(type)) {
@@ -46,6 +46,11 @@ const createTask = async (req, res) => {
 
         await idTracking.save();
         await newTask.save();
+
+        createNotification(
+            "Task Created",
+            `A new task titled "${topic}" has been created.`
+        );
 
         if (type === 'General') {
             const devices = await DeviceModel.find();
@@ -232,6 +237,12 @@ const updateTask = async (req, res) => {
         task.done = done || task.done;
 
         await task.save();
+
+        createNotification(
+            "Task Updated",
+            `Task titled "${task.topic}" has been updated.`
+        );
+
         return res.status(200).json(task);
     } catch (error) {
         res.status(200).json({ error: 'Internal server error' });
@@ -240,8 +251,7 @@ const updateTask = async (req, res) => {
 
 const updateTaskDoneStatus = async (req, res) => {
     try {
-
-        const { status } = req.query
+        const { status } = req.query;
 
         if (!status) {
             return res.status(400).json({
@@ -264,6 +274,12 @@ const updateTaskDoneStatus = async (req, res) => {
         task.updatedAt = new Date();
 
         await task.save();
+
+        createNotification(
+            "Task Status Updated",
+            `Task titled "${task.topic}" status has been updated to ${status}.`
+        );
+
         res.status(200).json({
             status: true,
             message: 'Task status updated successfully',
@@ -279,6 +295,7 @@ const updateTaskDoneStatus = async (req, res) => {
     }
 };
 
+
 const deleteTask = async (req, res) => {
     try {
         const task = await Task.findOne({ id: req.params.id });
@@ -291,7 +308,13 @@ const deleteTask = async (req, res) => {
         }
 
         await Task.deleteOne({ id: req.params.id });
-        await conversationModel.deleteMany({roomId: task.roomId})
+        await conversationModel.deleteMany({ roomId: task.roomId });
+
+        createNotification(
+            "Task Deleted",
+            `Task titled "${task.topic}" has been deleted.`
+        );
+
         return res.status(200).json({
             status: true,
             message: 'Task deleted successfully',
@@ -305,6 +328,7 @@ const deleteTask = async (req, res) => {
         });
     }
 };
+
 
 module.exports = {
     createTask,
