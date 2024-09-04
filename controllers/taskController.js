@@ -55,12 +55,17 @@ const createTask = async (req, res) => {
         if (type === 'General') {
             const devices = await DeviceModel.find();
             devices.forEach(device => {
-                scheduleNotification(device?.deviceToken, topic, description, timeSent);
+                if (device?.deviceToken !== "none") {
+                    scheduleNotification(device?.deviceToken, topic, description, timeSent);
+                }
             });
         } else {
-            const devices = await DeviceModel.find({ userId: { $in: assignTo.id } });
+            const assignToIds = assignTo.map(assignee => assignee.id);
+            const devices = await DeviceModel.find({ userId: { $in: assignToIds } });
             devices.forEach(device => {
-                scheduleNotification(device?.deviceToken, topic, description, timeSent);
+                if (device?.deviceToken !== "none") {
+                    scheduleNotification(device?.deviceToken, topic, description, timeSent);
+                }
             });
         }
 
