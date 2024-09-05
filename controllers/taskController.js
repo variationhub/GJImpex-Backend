@@ -6,6 +6,14 @@ const scheduleNotification = require('../services/notificationServices');
 const conversationModel = require('../models/conversationModel');
 const { createNotification } = require("./notificationController");
 
+function sendMessageTaskController() {
+    const message = {
+        DOMAIN: 'TASK',
+        INTENT: 'FETCHDATA'
+    }
+    sendMessage(message)
+}
+
 const createTask = async (req, res) => {
     const userId = req.user.id;
     const { topic, description, type, assignTo, timeSent = Date.now() } = req.body;
@@ -69,6 +77,7 @@ const createTask = async (req, res) => {
             });
         }
 
+        sendMessageTaskController();
         return res.status(201).json({
             status: true,
             message: 'Task created successfully',
@@ -248,6 +257,8 @@ const updateTask = async (req, res) => {
             `Task titled "${task.topic}" has been updated.`
         );
 
+        sendMessageTaskController();
+
         return res.status(200).json(task);
     } catch (error) {
         res.status(200).json({ error: 'Internal server error' });
@@ -284,7 +295,7 @@ const updateTaskDoneStatus = async (req, res) => {
             "Task Status Updated",
             `Task titled "${task.topic}" status has been updated to ${status}.`
         );
-
+        sendMessageTaskController();
         res.status(200).json({
             status: true,
             message: 'Task status updated successfully',
@@ -320,6 +331,7 @@ const deleteTask = async (req, res) => {
             `Task titled "${task.topic}" has been deleted.`
         );
 
+        sendMessageTaskController();
         return res.status(200).json({
             status: true,
             message: 'Task deleted successfully',
