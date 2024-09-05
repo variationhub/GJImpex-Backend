@@ -19,7 +19,7 @@ router.use(verifyToken);
 router.get('/', getAllOrders);
 router.get('/:id', getOrderById);
 router.get('/filter/:status', paginationMiddleware, filterOrdersByStatus);
-router.get('/deleted/all', getAllDeletedOrders)
+router.get('/deleted/all', paginationMiddleware, getAllDeletedOrders)
 router.post('/', createOrder);
 router.put('/:id', updateOrder);
 router.put('/:id/status', updateOrderStatus);
