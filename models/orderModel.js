@@ -45,16 +45,19 @@ const productDetails = new mongoose.Schema({
 const orderModel = new mongoose.Schema({
     id: {
         type: String,
-        default: uuid
+        default: uuid,
+        index: true 
     },
     partyId: {
         type: String,
         required: true,
-        ref: 'Party'
+        ref: 'Party',
+        index: true 
     },
     transportId: {
         type: String,
-        ref: 'Transport'
+        ref: 'Transport',
+        index: true 
     },
     customTransport: {
         type: String,

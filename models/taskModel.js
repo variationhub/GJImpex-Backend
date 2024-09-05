@@ -7,7 +7,8 @@ const { v4: uuid } = require('uuid');
 const taskModel = new mongoose.Schema({
     id: {
         type: String,
-        default: uuid
+        default: uuid,
+        index: true 
     },
     topic: {
         type: String,

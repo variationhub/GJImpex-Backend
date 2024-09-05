@@ -6,7 +6,8 @@ const { userEnum } = require('../contanst/data');
 const userModel = new mongoose.Schema({
     id: {
         type: String,
-        default: uuid
+        default: uuid,
+        index: true 
     },
     name: {
         type: String,
