@@ -8,7 +8,7 @@ const getProfit = async (req, res) => {
         const toDate = new Date(to); // YYYY-MM-DD
         toDate.setDate(toDate.getDate() + 1);
 
-        let query = { status: 'DONE', }
+        let query = { status: { $in: ["DONE", "LR PENDING"] } }
         if (from && to) {
             query = { ...query, dispatchDate: { $gte: fromDate, $lte: toDate } }
         }
@@ -100,7 +100,7 @@ const getDailyReport = async (req, res) => {
         const dailyReport = await OrderModel.aggregate([
             {
                 $match: {
-                    status: "DONE",
+                    status: { $in: ["DONE", "LR PENDING"] },
                     dispatchDate: { $gte: fromDate, $lte: toDate }
                 }
             },
