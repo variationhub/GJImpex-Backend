@@ -563,7 +563,8 @@ const getAllOrders = async (req, res) => {
     const orders = await OrderModel.aggregate([
       {
         $match: {
-          status: { $ne: 'DONE' }
+          status: { $ne: 'DONE' },
+          isDeleted: { $ne: true },
         }
       },
       {
@@ -697,6 +698,8 @@ const getAllOrders = async (req, res) => {
 
 const getAllDeletedOrders = async (req, res) => {
   try {
+    const { page, limit, skip } = req.pagination;
+
     const orders = await OrderModel.aggregate([
       {
         $match: {
@@ -816,12 +819,21 @@ const getAllDeletedOrders = async (req, res) => {
       {
         $sort: { createdAt: -1 }
       }
-    ]);
+    ]).skip(skip)
+      .limit(limit);
 
+    const totalCount = await OrderModel.find({ isDeleted: true }).count();
+    
     res.json({
       status: true,
       data: orders,
-      message: "Order details retrieved successfully"
+      meta_data: {
+        page,
+        items: totalCount,
+        page_size: limit,
+        pages: Math.ceil(totalCount / limit)
+      },
+      message: "Deleted orders retrieved successfully"
     });
   } catch (error) {
     res.status(200).json({

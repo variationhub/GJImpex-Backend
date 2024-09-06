@@ -4,7 +4,8 @@ const { v4: uuid } = require('uuid');
 const transportModel = new mongoose.Schema({
     id: {
         type: String,
-        default: uuid
+        default: uuid,
+        index: true 
     },
     transportName: {
         type: String,

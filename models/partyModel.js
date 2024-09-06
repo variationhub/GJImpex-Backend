@@ -4,7 +4,8 @@ const { v4: uuid } = require('uuid');
 const partyModel = new mongoose.Schema({
     id: {
         type: String,
-        default: uuid
+        default: uuid,
+        index: true 
     },
     partyName: {
         type: String,

@@ -35,7 +35,8 @@ const productPriceHistory = new mongoose.Schema({
 const productModel = new mongoose.Schema({
     id: {
         type: String,
-        default: uuid
+        default: uuid,
+        index: true 
     },
     productName: {
         type: String,
