@@ -94,11 +94,11 @@ const createOrder = async (req, res) => {
 
     const newOrder = new OrderModel({ ...orderData, userId, createdBy, orderNumber });
     await newOrder.save();
-    
+
     await Promise.all(productData.map(async (product) => {
       await product.save();
     }));
-    
+
     createNotification(
       "Order Created",
       `An order has been created with order number ${orderNumber} by ${orderData.companyName}.`
@@ -126,9 +126,9 @@ const updateOrder = async (req, res) => {
 
     const { id } = req.params;
     const orderData = req.body;
-    
+
     const existingOrder = await OrderModel.findOne({ id });
-    
+
     if (!existingOrder) {
       return res.status(404).json({
         status: false,
@@ -137,7 +137,7 @@ const updateOrder = async (req, res) => {
       });
     }
 
-    if(existingOrder?.status !== "BILLING"){
+    if (existingOrder?.status !== "BILLING") {
       return res.status(400).json({
         status: false,
         data: null,
@@ -208,10 +208,11 @@ const updateOrder = async (req, res) => {
               orderOldData.buyPriceHistory = orderOldData.buyPriceHistory.filter(item => item.quantity)
               orderOldData.quantity = orderOldData.buyPriceHistory.reduce((acc, curr) => acc + curr.quantity, 0);
               orderOldData.buyPrice = (orderOldData.buyPriceHistory.reduce((acc, curr) => acc + curr.buyPrice * curr.quantity, 0) / orderOldData.quantity).toFixed(2)
-
+              
             } else if (orderNewData.quantity > orderOldData.quantity) {
 
               let stock = orderNewData.quantity - orderOldData.quantity;
+              const remaining = stock;
               if (product.stock < stock) {
                 throw new Error(`${product.productName} have Only ${product.stock} stock.`);
               }
@@ -229,7 +230,6 @@ const updateOrder = async (req, res) => {
                     userId: item.userId,
                     id: item.id
                   })
-                  product.stock -= stock
                   stock = 0;
                   break;
                 } else if (item.stock) {
@@ -245,7 +245,7 @@ const updateOrder = async (req, res) => {
                   item.stock = 0;
                 }
               }
-
+              product.stock -= remaining;
               orderOldData.buyPrice = Number(subTotalPrice / orderOldData.quantity).toFixed(2);
               orderOldData.quantity = orderProductHistory.reduce((acc, curr) => acc + curr.quantity, 0)
               orderOldData.buyPriceHistory = orderProductHistory
@@ -384,7 +384,7 @@ const updateOrder = async (req, res) => {
       }
     });
 
-    existingOrder.orders = existingOrder.orders.filter(item => orderData.orders.map(item => item.productId).includes(item.productId))
+    existingOrder.orders = JSON.parse(JSON.stringify(existingOrder.orders))
     existingOrder.totalPrice = Number(orderData.totalPrice || 0);
     existingOrder.changed = true;
     await existingOrder.save()
@@ -400,7 +400,7 @@ const updateOrder = async (req, res) => {
 
     res.json({
       status: true,
-      data: { existingOrder, productData },
+      data: "{ existingOrder, productData }",
       message: "Order updated successfully"
     });
 
@@ -646,7 +646,7 @@ const getAllOrders = async (req, res) => {
           transportName: { $first: '$transportName' },
           companyName: { $first: '$companyName' },
           orderNumber: { $first: '$orderNumber' },
-          orderPast:{ $first: '$orderPast' },
+          orderPast: { $first: '$orderPast' },
           isDeleted: { $first: '$isDeleted' },
           billed: { $first: '$billed' },
           billNumber: { $first: '$billNumber' },
@@ -785,7 +785,7 @@ const getAllDeletedOrders = async (req, res) => {
           transportName: { $first: '$transportName' },
           companyName: { $first: '$companyName' },
           orderNumber: { $first: '$orderNumber' },
-          orderPast:{ $first: '$orderPast' },
+          orderPast: { $first: '$orderPast' },
           isDeleted: { $first: '$isDeleted' },
           billed: { $first: '$billed' },
           billNumber: { $first: '$billNumber' },
@@ -823,7 +823,7 @@ const getAllDeletedOrders = async (req, res) => {
       .limit(limit);
 
     const totalCount = await OrderModel.find({ isDeleted: true }).count();
-    
+
     res.json({
       status: true,
       data: orders,
@@ -965,7 +965,7 @@ const getOrderById = async (req, res) => {
           transportName: { $first: '$transportName' },
           companyName: { $first: '$companyName' },
           orderNumber: { $first: '$orderNumber' },
-          orderPast:{ $first: '$orderPast' },
+          orderPast: { $first: '$orderPast' },
           isDeleted: { $first: '$isDeleted' },
           billed: { $first: '$billed' },
           billNumber: { $first: '$billNumber' },
