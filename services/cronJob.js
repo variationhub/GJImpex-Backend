@@ -8,6 +8,8 @@ let start = async function() {
         } catch (error) {
             console.error('Error in cron job:', error);
         }
+    }, {
+        timezone: "Asia/Kolkata"  // Set timezone to IST
     });
 }
 

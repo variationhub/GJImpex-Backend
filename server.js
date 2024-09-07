@@ -41,6 +41,7 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
 
+cron.start();
 
 app.get('/', (req, res) => {
     res.send("Server is running")
@@ -55,8 +56,6 @@ app.use('/api/party', partyRoute);
 app.use('/api/orders', orderRoute);
 app.use('/api/overview', overviewRoute);
 app.use('/api/notification', notificationRoute);
-
-cron.start();
 
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
