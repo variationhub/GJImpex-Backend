@@ -19,7 +19,7 @@ const login = async (req, res) => {
         }
 
         if (!user) {
-            return res.status(401).json({
+            return res.status(200).json({
                 status: false,
                 data: null,
                 message: 'Invalid credentials'
@@ -29,7 +29,7 @@ const login = async (req, res) => {
         const passwordMatch = await bcrypt.compare(password, user.password);
 
         if (!passwordMatch) {
-            return res.status(401).json({
+            return res.status(200).json({
                 status: false,
                 data: null,
                 message: 'Invalid credentials'
@@ -93,7 +93,7 @@ const forgotPassword = async (req, res) => {
         const user = await User.findOne({ email });
 
         if (!user) {
-            return res.status(404).json({
+            return res.status(200).json({
                 message: "User not found",
                 status: false,
                 data: null

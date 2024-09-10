@@ -19,7 +19,7 @@ const createTask = async (req, res) => {
     const { topic, description, type, assignTo, timeSent = Date.now() } = req.body;
 
     if (!taskTypeEnum.includes(type)) {
-        return res.status(400).json({
+        return res.status(200).json({
             status: false,
             message: 'Invalid task type',
             data: null
@@ -27,7 +27,7 @@ const createTask = async (req, res) => {
     }
 
     if ((type === 'Query' || type === 'Task') && (!assignTo || assignTo.length === 0)) {
-        return res.status(400).json({
+        return res.status(200).json({
             status: false,
             message: 'Assignee is required',
             data: null
@@ -194,7 +194,7 @@ const getTaskById = async (req, res) => {
         ]);
 
         if (tasks.length === 0) {
-            return res.status(404).json({
+            return res.status(200).json({
                 status: false,
                 data: null,
                 message: 'Task not found'
@@ -218,7 +218,7 @@ const updateTask = async (req, res) => {
     const { topic, description, type, assigner, assignTo, done } = req.body;
 
     if (!taskTypeEnum.includes(type)) {
-        return res.status(400).json({
+        return res.status(200).json({
             status: false,
             data: null,
             message: 'Invalid task type'
@@ -226,7 +226,7 @@ const updateTask = async (req, res) => {
     }
 
     if ((type === 'Query' || type === 'Task') && (!assignTo || assignTo.length === 0)) {
-        return res.status(400).json({
+        return res.status(200).json({
             status: false,
             data: null,
             message: 'assignTo is required for Query or Task types'
@@ -236,7 +236,7 @@ const updateTask = async (req, res) => {
     try {
         const task = await Task.findOne({ id: req.params.id });
         if (!task) {
-            return res.status(404).json({
+            return res.status(200).json({
                 status: false,
                 data: null,
                 message: 'Task not found'
@@ -270,7 +270,7 @@ const updateTaskDoneStatus = async (req, res) => {
         const { status } = req.query;
 
         if (!status) {
-            return res.status(400).json({
+            return res.status(200).json({
                 status: false,
                 data: null,
                 message: 'Status is required'
@@ -279,7 +279,7 @@ const updateTaskDoneStatus = async (req, res) => {
 
         const task = await Task.findOne({ id: req.params.id });
         if (!task) {
-            return res.status(404).json({
+            return res.status(200).json({
                 status: false,
                 data: null,
                 message: 'Task not found'
@@ -316,7 +316,7 @@ const deleteTask = async (req, res) => {
     try {
         const task = await Task.findOne({ id: req.params.id });
         if (!task) {
-            return res.status(404).json({
+            return res.status(200).json({
                 status: false,
                 data: null,
                 message: 'Task not found'

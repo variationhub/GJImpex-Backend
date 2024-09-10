@@ -23,7 +23,7 @@ const createProduct = async (req, res) => {
     })
 
     if (productFind) {
-      return res.status(400).json({
+      return res.status(200).json({
         status: false,
         data: null,
         message: "Product already exists"
@@ -40,7 +40,7 @@ const createProduct = async (req, res) => {
     }, 0)
 
     if(flag) {
-      return res.status(400).json({
+      return res.status(200).json({
         status: false,
         data: null,
         message: "Stock or Price should not be zero"
@@ -77,7 +77,7 @@ const updateProduct = async (req, res) => {
     const product = await Product.findOne({ id });
 
     if (!product) {
-      return res.status(404).json({
+      return res.status(200).json({
         status: false,
         data: null,
         message: "Product not found"
@@ -120,7 +120,7 @@ const updateProductStock = async (req, res) => {
     const product = await Product.findOne({ id });
 
     if (!product) {
-      return res.status(404).json({
+      return res.status(200).json({
         status: false,
         data: null,
         message: "Product not found"
@@ -137,7 +137,7 @@ const updateProductStock = async (req, res) => {
     }, product.stock)
 
     if (flag) {
-      return res.status(400).json({
+      return res.status(200).json({
         status: false,
         data: null,
         message: "Product stock cannot be zero or price cannot be zero"
@@ -319,7 +319,7 @@ const getProductById = async (req, res) => {
       }
     ]);
     if (productsData.length === 0) {
-      return res.status(404).json({
+      return res.status(200).json({
         status: false,
         data: null,
         message: "Product not found"
@@ -346,7 +346,7 @@ const updateProductUpdate = async (req, res) => {
   try {
 
     if (stock === 0 || price === 0) {
-      return res.status(400).json({
+      return res.status(200).json({
         status: false,
         data: null,
         message: "Stock or price must be greater than 0"
@@ -428,7 +428,7 @@ const deleteProduct = async (req, res) => {
     const deletedProduct = await Product.findOneAndDelete({ id });
 
     if (!deletedProduct) {
-      return res.status(404).json({
+      return res.status(200).json({
         status: false,
         data: null,
         message: "Product not found"
@@ -464,4 +464,5 @@ module.exports = {
   updateProductUpdate,
   deleteProductStock,
   deleteProduct,
+  sendMessageProductController
 };

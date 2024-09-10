@@ -1,6 +1,7 @@
 const Transport = require("../models/transportModel");
 const { sendMessage } = require("../websocketHandler");
 const { createNotification } = require("./notificationController");
+const { sendMessagePartyController } = require("./partyController");
 
 function sendMessageTransportController() {
   const message = {
@@ -24,7 +25,7 @@ const createTransport = async (req, res) => {
 
     const name = await Transport.findOne({ transportName: body.transportName });
     if (name) {
-      return res.status(400).json({
+      return res.status(200).json({
         status: false,
         data: null,
         message: "Transport already exists"
@@ -39,6 +40,7 @@ const createTransport = async (req, res) => {
     );
 
     sendMessageTransportController();
+    sendMessagePartyController();
 
     res.status(201).json({
       status: true,
@@ -57,7 +59,7 @@ const updateTransport = async (req, res) => {
     const updateData = req.body;
 
     if (!updateData?.transportName) {
-      return res.status(404).json({
+      return res.status(200).json({
         status: false,
         data: null,
         message: "Transport name not valid"
@@ -67,7 +69,7 @@ const updateTransport = async (req, res) => {
     const existingTransport = await Transport.findOne({ id });
 
     if (!existingTransport) {
-      return res.status(404).json({
+      return res.status(200).json({
         status: false,
         data: null,
         message: "Transport not found"
@@ -117,7 +119,7 @@ const getTransport = async (req, res) => {
     const { id } = req.params;
     const data = await Transport.findOne({ id }, { _id: 0, createdAt: 0, updatedAt: 0 });
     if (!data) {
-      return res.status(404).json({
+      return res.status(200).json({
         status: false,
         data: null,
         message: "Transport not found"
@@ -139,7 +141,7 @@ const deleteTransport = async (req, res) => {
     const { id } = req.params;
     const data = await Transport.findOneAndDelete({ id });
     if (!data) {
-      return res.status(404).json({
+      return res.status(200).json({
         status: false,
         data: null,
         message: "Transport not found"

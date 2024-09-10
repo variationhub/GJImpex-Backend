@@ -4,6 +4,7 @@ const User = require("../models/userModel");
 const bcrypt = require('bcrypt');
 const { sendMessage } = require("../websocketHandler");
 const { createNotification } = require("./notificationController");
+const { sendMessagePartyController } = require("./partyController");
 
 function sendMessageUserController() {
   const message = {
@@ -21,7 +22,7 @@ const createUser = async (req, res) => {
     const requiredFields = ['name', 'nickName', 'email', 'password', 'mobileNumber', 'role'];
     const missingFields = requiredFields.filter(field => !userData[field]);
     if (missingFields.length > 0) {
-      return res.status(400).json({
+      return res.status(200).json({
         status: false,
         message: "All fields are required",
         data: null
@@ -29,7 +30,7 @@ const createUser = async (req, res) => {
     }
 
     if (!userEnum.includes(userData.role)) {
-      return res.status(400).json({
+      return res.status(200).json({
         status: false,
         message: `Role is not valid...!`,
         data: null
@@ -37,7 +38,7 @@ const createUser = async (req, res) => {
     }
 
     if (!/^[0-9]{10}$/.test(userData.mobileNumber)) {
-      return res.status(400).json({
+      return res.status(200).json({
         status: false,
         message: "Phone number must be 10 digits",
         data: null
@@ -45,7 +46,7 @@ const createUser = async (req, res) => {
     }
 
     if (userData.password.length <= 6) {
-      return res.status(400).json({
+      return res.status(200).json({
         status: false,
         message: "Password is too short",
         data: null
@@ -66,7 +67,7 @@ const createUser = async (req, res) => {
       if (existingUser.mobileNumber === userData.mobileNumber) duplicateFields.push('Mobile Number');
       if (existingUser.nickName === userData.nickName) duplicateFields.push('Nick Name');
 
-      return res.status(400).json({
+      return res.status(200).json({
         status: false,
         message: `${duplicateFields.join(', ')} already exists`,
         data: null
@@ -82,6 +83,7 @@ const createUser = async (req, res) => {
     );
 
     sendMessageUserController();
+    sendMessagePartyController();
     return res.status(201).json({
       status: true,
       data: user,
@@ -106,7 +108,7 @@ const updateUser = async (req, res) => {
 
     const existingUser = await User.findOne({ id });
     if (!existingUser) {
-      return res.status(404).json({
+      return res.status(200).json({
         status: false,
         message: "User not found",
         data: null
@@ -114,7 +116,7 @@ const updateUser = async (req, res) => {
     }
 
     if (!Object.keys(updateData).length) {
-      return res.status(400).json({
+      return res.status(200).json({
         status: false,
         message: "Minimum one field is required",
         data: null
@@ -122,7 +124,7 @@ const updateUser = async (req, res) => {
     }
 
     if (updateData.role && !userEnum.includes(updateData.role)) {
-      return res.status(400).json({
+      return res.status(200).json({
         status: false,
         message: `Role is not valid...!`,
         data: null
@@ -130,7 +132,7 @@ const updateUser = async (req, res) => {
     }
 
     if (updateData.mobileNumber && !/^[0-9]{10}$/.test(updateData.mobileNumber)) {
-      return res.status(400).json({
+      return res.status(200).json({
         status: false,
         message: "Phone number must be 10 digits",
         data: null
@@ -138,7 +140,7 @@ const updateUser = async (req, res) => {
     }
 
     if (updateData.password && updateData.password.length <= 6) {
-      return res.status(400).json({
+      return res.status(200).json({
         status: false,
         message: "Password is too short",
         data: null
@@ -193,7 +195,7 @@ const getUserById = async (req, res) => {
   try {
     const user = await User.findOne({ id });
     if (!user) {
-      return res.status(404).json({
+      return res.status(200).json({
         status: false,
         data: null,
         message: "User not found"
@@ -220,7 +222,7 @@ const deleteUser = async (req, res) => {
     const deletedUser = await User.findOneAndDelete({ id });
 
     if (!deletedUser) {
-      return res.status(404).json({
+      return res.status(200).json({
         status: false,
         data: null,
         message: "User not found"
@@ -257,7 +259,7 @@ const changePassword = async (req, res) => {
     const user = await User.findOne({id});
 
     if (!user) {
-      return res.status(404).json({
+      return res.status(200).json({
         message: "User not found",
         status: false,
         data: null
@@ -267,7 +269,7 @@ const changePassword = async (req, res) => {
     const passwordMatch = await bcrypt.compare(oldPassword, user.password);
 
     if (!passwordMatch) {
-      return res.status(400).json({
+      return res.status(200).json({
         message: "please enter valid old password",
         status: false,
         data: null

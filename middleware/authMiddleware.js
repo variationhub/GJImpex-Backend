@@ -4,7 +4,7 @@ const verifyToken = (req, res, next) => {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({
+        return res.status(200).json({
             status: false,
             data: null,
             message: 'Unauthorized - Token not provided'
@@ -18,7 +18,7 @@ const verifyToken = (req, res, next) => {
         next();
     } catch (error) {
         console.error(error);
-        return res.status(401).json({
+        return res.status(200).json({
             status: false,
             data: null,
             message: 'Unauthorized - Invalid token'
