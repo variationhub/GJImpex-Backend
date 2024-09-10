@@ -5,6 +5,7 @@ const { taskTypeEnum } = require('../contanst/data');
 const scheduleNotification = require('../services/notificationServices');
 const conversationModel = require('../models/conversationModel');
 const { createNotification } = require("./notificationController");
+const { sendMessage } = require('../websocketHandler');
 
 function sendMessageTaskController() {
     const message = {
