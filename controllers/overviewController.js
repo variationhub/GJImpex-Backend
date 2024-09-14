@@ -60,6 +60,7 @@ const getProfit = async (req, res) => {
                                 '$orders',
                                 { gstPrice: '$gstPrice' },
                                 { orderId: '$id' },
+                                { orderNumber: '$orderNumber' },
                                 { createDate: '$updatedAt' },
                                 { productName: '$product.productName' } // Include product name
                             ]
@@ -151,13 +152,12 @@ const getDailyReport = async (req, res) => {
                     gstPrice: { $first: "$gstPrice" },
                     totalPrice: { $first: "$totalPrice" },
                     nickName: { $first: "$user.nickName" },
+                    orderNumber: { $first: "$orderNumber" },
                     orders: {
                         $push: {
                             productName: "$product.productName",
                             quantity: "$orders.quantity",
                             sellPrice: "$orders.sellPrice",
-                            createAt: "$updatedAt",
-
                         }
                     }
                 }
