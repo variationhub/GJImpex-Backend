@@ -29,7 +29,10 @@ const createOrder = async (req, res) => {
 
       const product = productData.find(item => item.id === order.productId);
       if (product.stock < order.quantity) {
-        throw new Error(`${product.productName} have Only ${product.stock} stock.`);
+        throw new Error({
+          status: false,
+          data: null,
+          message: `${product.productName} have Only ${product.stock} stock.`});
       } else {
 
         let stock = order.quantity;
@@ -70,7 +73,10 @@ const createOrder = async (req, res) => {
         subTotalPrice = 0;
 
         if (!product) {
-          throw new Error(`Product with ID ${order.productId} not found.`);
+          throw new Error({
+            status: false,
+            data: null,
+            message: `Product with ID ${order.productId} not found.`});
         }
 
         let stockBelowMin = product.stock < product.minStock;
@@ -177,7 +183,10 @@ const updateOrder = async (req, res) => {
 
       const product = productData.find(item => item.id === order.productId);
       if (product.stock < order.quantity) {
-        throw new Error(`${product.productName} have Only ${product.stock} stock.`);
+        throw new Error({
+          status: false,
+          data: null,
+          message: `${product.productName} have Only ${product.stock} stock.`});
       } else {
 
         let stock = order.quantity;
@@ -218,7 +227,10 @@ const updateOrder = async (req, res) => {
         subTotalPrice = 0;
 
         if (!product) {
-          throw new Error(`Product with ID ${order.productId} not found.`);
+          throw new Error({
+            status: false,
+            data: null,
+            message: `Product with ID ${order.productId} not found.`});
         }
 
         let stockBelowMin = product.stock < product.minStock;
