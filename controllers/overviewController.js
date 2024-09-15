@@ -161,6 +161,11 @@ const getDailyReport = async (req, res) => {
                         }
                     }
                 }
+            },
+            {
+                $sort:{
+                    orderNumber: 1,
+                }
             }
         ]);
 
