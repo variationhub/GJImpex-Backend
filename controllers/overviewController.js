@@ -102,7 +102,8 @@ const getDailyReport = async (req, res) => {
             {
                 $match: {
                     status: { $in: ["DONE", "LR PENDING"] },
-                    dispatchDate: { $gte: fromDate, $lte: toDate }
+                    dispatchDate: { $gte: fromDate, $lte: toDate },
+                    isDeleted: { $ne: true }
                 }
             },
             {
@@ -143,7 +144,7 @@ const getDailyReport = async (req, res) => {
             },
             {
                 $group: {
-                    _id: "$partyId",
+                    _id: { partyId: "$partyId", orderNumber: "$orderNumber" },
                     partyName: { $first: "$party.partyName" },
                     companyName: { $first: "$companyName" },
                     billNumber: { $first: "$billNumber" },
