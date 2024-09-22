@@ -71,7 +71,12 @@ const userModel = new mongoose.Schema({
     updatedAt: {
         type: Date,
         default: Date.now
-    }
+    },
+    productId: [{
+        type: String,
+        ref: 'Product',
+        default: []
+    }]
 }, { versionKey: false });
 
 userModel.pre('save', async function (next) {

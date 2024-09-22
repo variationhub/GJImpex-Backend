@@ -51,6 +51,7 @@ const login = async (req, res) => {
                 mobileNumber: user.mobileNumber,
                 email: user.email,
                 role: user.role,
+                productId: user.productId
             },
             process.env.SECRET,
             {
