@@ -174,7 +174,83 @@ const updateUser = async (req, res) => {
 // Get All Users
 const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().sort({ name: 1 });
+    const users = await User.aggregate([
+      {
+        '$unwind': {
+          'path': '$productId', 
+          'preserveNullAndEmptyArrays': true
+        }
+      }, {
+        '$lookup': {
+          'from': 'products', 
+          'localField': 'productId', 
+          'foreignField': 'id', 
+          'as': 'Product', 
+          'pipeline': [
+            {
+              '$project': {
+                'id': 1, 
+                'productName': 1, 
+                '_id': 0
+              }
+            }
+          ]
+        }
+      }, {
+        '$unwind': {
+          'path': '$Product', 
+          'preserveNullAndEmptyArrays': true
+        }
+      }, {
+        '$group': {
+          '_id': '$id', 
+          'id': {
+            $first: "$id",
+          },
+          'name': {
+            '$first': '$name'
+          }, 
+          'nickName': {
+            '$first': '$nickName'
+          }, 
+          'mobileNumber': {
+            '$first': '$mobileNumber'
+          }, 
+          'email': {
+            '$first': '$email'
+          }, 
+          'role': {
+            '$first': '$role'
+          }, 
+          'dispatcheerPriority': {
+            '$first': '$dispatcheerPriority'
+          }, 
+          'dispatcherColor': {
+            '$first': '$dispatcherColor'
+          }, 
+          'isLoginAble': {
+            '$first': '$isLoginAble'
+          }, 
+          'priority': {
+            '$first': '$priority'
+          }, 
+          'products': {
+            '$push': '$Product'
+          },
+          'createdAt': {
+            '$first': '$createdAt'
+          }, 
+          'updatedAt': {
+            '$first': '$updatedAt'
+          }, 
+        }
+      }, {
+        '$sort': {
+          'name': 1
+        }
+      }
+    ]);
+
     res.json({
       status: true,
       data: users,
