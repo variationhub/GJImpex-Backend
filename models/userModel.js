@@ -64,6 +64,10 @@ const userModel = new mongoose.Schema({
         type:String,
         trim:true,
     },
+    isDeleted:{
+        type: Boolean,
+        default: false
+    },
     createdAt: {
         type: Date,
         default: Date.now

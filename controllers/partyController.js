@@ -102,6 +102,11 @@ const getAllParty = async (req, res) => {
         // const data = await Party.find({}, { "_id": 0, "createdAt": 0, "updatedAt": 0 }).sort({ "partyName": 1 });
         const data = await Party.aggregate([
             {
+                $match:{
+                    isDeleted: false
+                }
+            },
+            {
                 $lookup: {
                     from: 'users',  // The collection name in MongoDB for User
                     localField: 'userId',
@@ -178,7 +183,7 @@ const getParty = async (req, res) => {
 const deleteParty = async (req, res) => {
     try {
         const { id } = req.params;
-        const data = await Party.findOneAndDelete({ id });
+        const data = await Party.findOne({ id });
         if (!data) {
             return res.status(200).json({
                 status: false,
@@ -186,6 +191,8 @@ const deleteParty = async (req, res) => {
                 message: "Party not found"
             });
         }
+        data.isDeleted = true;
+        await data.save();
         sendMessagePartyController();
         createNotification(
             "Party Deleted",

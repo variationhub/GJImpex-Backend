@@ -27,6 +27,10 @@ const transportModel = new mongoose.Schema({
         required: true,
         trim: true
     },
+    isDeleted:{
+        type: Boolean,
+        default: false
+    },
     createdAt: {
         type: Date,
         default: Date.now

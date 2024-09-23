@@ -103,7 +103,7 @@ const updateTransport = async (req, res) => {
 
 const getAllTransport = async (req, res) => {
   try {
-    const data = await Transport.find({}, { _id: 0, createdAt: 0, updatedAt: 0 }).sort({ 'transportName': 1 });
+    const data = await Transport.find({isDeleted: false}, { _id: 0, createdAt: 0, updatedAt: 0 }).sort({ 'transportName': 1 });
     res.json({
       status: true,
       data: data,
@@ -139,7 +139,7 @@ const getTransport = async (req, res) => {
 const deleteTransport = async (req, res) => {
   try {
     const { id } = req.params;
-    const data = await Transport.findOneAndDelete({ id });
+    const data = await Transport.findOne({ id });
     if (!data) {
       return res.status(200).json({
         status: false,
@@ -148,6 +148,8 @@ const deleteTransport = async (req, res) => {
       });
     }
 
+    data.isDeleted = true;
+    await data.save();
     createNotification(
       "Transport Deleted",
       `Transport with name "${data.transportName}" has been deleted.`

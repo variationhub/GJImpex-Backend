@@ -33,13 +33,13 @@ const createProduct = async (req, res) => {
     let flag = false;
     const stock = req.body.productPriceHistory.reduce((acc, curr) => {
       curr.addedStock = curr.stock;
-      if(curr.stock === 0 || curr.price === 0){
+      if (curr.stock === 0 || curr.price === 0) {
         flag = true;
       }
       return acc + curr.stock;
     }, 0)
 
-    if(flag) {
+    if (flag) {
       return res.status(200).json({
         status: false,
         data: null,
@@ -48,7 +48,7 @@ const createProduct = async (req, res) => {
     }
 
     const product = await Product.create({ ...productData, productPriceHistory: req.body.productPriceHistory.map(value => ({ ...value, userId })), stock });
-    
+
     createNotification(
       "Product Created",
       `Product has been created with product name ${productData.productName}.`
@@ -174,6 +174,11 @@ const getAllProducts = async (req, res) => {
   try {
 
     const productsData = await Product.aggregate([
+      {
+        $match: {
+          isDeleted: false
+        }
+      },
       {
         $addFields: {
           productPriceHistory: {
@@ -425,7 +430,7 @@ const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const deletedProduct = await Product.findOneAndDelete({ id });
+    const deletedProduct = await Product.findOne({ id });
 
     if (!deletedProduct) {
       return res.status(200).json({
@@ -434,6 +439,8 @@ const deleteProduct = async (req, res) => {
         message: "Product not found"
       });
     }
+    deletedProduct.isDeleted = true;
+    await deletedProduct.save();
 
     createNotification(
       "Product Deleted",
