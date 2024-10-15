@@ -275,7 +275,16 @@ const updateOrder = async (req, res) => {
 
 const updateOrderStatus = async (req, res) => {
   const { id } = req.params;
-  const { billed, billNumber, dispatched, lrSent } = req.query;
+
+  const {
+    billed,
+    billNumber,
+    dispatched,
+    dispatchBox,
+    dispatchNarration,
+    lrSent,
+    reset
+  } = req.body
 
   try {
     const order = await OrderModel.findOne({ id });
@@ -288,77 +297,69 @@ const updateOrderStatus = async (req, res) => {
       });
     }
 
-    if (billed !== undefined) {
-      if (billed === 'false') {
-        order.billed = false;
-        order.dispatched = false;
-        order.lrSent = false;
-        order.billNumber = "";
-      } else if (billNumber) {
-        order.billed = billed === 'true';
-        order.billNumber = billNumber;
-      } else {
-        return res.status(200).json({
-          status: false,
-          data: null,
-          message: "Bill Number is required"
-        });
-      }
+    if (reset) {
+      order.billed = false;
+      order.dispatched = false;
+      order.lrSent = false;
+      order.billNumber = "";
+      order.dispatchDate = null;
+      order.dispatchBox = 0
+      order.dispatchNarration = "";
+
+      order.status = "BILLING";
+      await order.save();
+      sendMessageOrderController();
+      createNotification(
+        "Order Status Reset",
+        `An order has been reset with order number ${order.orderNumber}.`
+      );
+      return res.json({
+        status: true,
+        data: order,
+        message: "Order reset successfully"
+      });
+
     }
-    if (dispatched !== undefined) {
-      if (order.dispatched === 'false') {
-        order.dispatched = false;
-        order.lrSent = false;
-      } else if (order.billed) {
-        order.dispatched = dispatched === 'true';
-        order.dispatchDate = Date.now();
-      } else {
-        return res.status(200).json({
-          status: false,
-          data: null,
-          message: "Order must be billed first"
-        });
-      }
+
+    if (billed && billNumber === "") {
+      return res.status(200).json({
+        status: false,
+        data: null,
+        message: "Bill Number is required"
+      });
     }
-    if (lrSent !== undefined) {
-      if (lrSent === 'false') {
-        order.lrSent = false;
-      } else if (order.billed && order.dispatched) {
-        order.lrSent = lrSent === 'true';
-      } else {
-        return res.status(200).json({
-          status: false,
-          data: null,
-          message: "Order must be billed and dispatched first"
-        });
-      }
-    }
+    order.billNumber = billNumber;
+    order.billed = billed;
+    order.dispatched = dispatched;
+    order.dispatchDate = dispatched ? new Date() : null;
+    order.dispatchBox = dispatchBox;
+    order.dispatchNarration = dispatchNarration;
+    order.lrSent = lrSent;
 
     let newStatus = "BILLING";
 
-    if (order.billed) {
+    if (billed) {
       newStatus = "DISPATCHING";
-      if (order.dispatched) {
+      if (dispatched) {
         newStatus = "LR PENDING";
-        if (order.lrSent) {
+        if (lrSent) {
           newStatus = "DONE";
         }
       }
     }
 
     order.status = newStatus;
-    await order.save();
 
+    await order.save();
     sendMessageOrderController();
     createNotification(
-      "Order Updated",
-      `Updated status of order number ${order.orderNumber} is ${newStatus}.`
+      "Order Status Updated",
+      `An order has been updated to ${order.status} with order number ${order.orderNumber}.`
     );
-
     res.json({
       status: true,
       data: order,
-      message: "Order status updated"
+      message: "Order updated successfully"
     });
 
   } catch (error) {
@@ -477,8 +478,11 @@ const getAllOrders = async (req, res) => {
               },
               "$customTransport"
             ]
-          }
+          },
         }
+      },
+      {
+        $unwind: '$transport'
       },
       {
         $unwind: '$party' // Deconstructing the array field 'party' to individual documents
@@ -504,6 +508,7 @@ const getAllOrders = async (req, res) => {
           party: { $first: '$party' },
           transportId: { $first: '$transportId' },
           transportName: { $first: '$transportName' },
+          eBilling: { $first: '$transport.eBilling' },
           companyName: { $first: '$companyName' },
           orderNumber: { $first: '$orderNumber' },
           orderPast: { $first: '$orderPast' },
@@ -511,6 +516,8 @@ const getAllOrders = async (req, res) => {
           billed: { $first: '$billed' },
           billNumber: { $first: '$billNumber' },
           dispatched: { $first: '$dispatched' },
+          dispatchBox: { $first: '$dispatchBox' },
+          dispatchNarration: { $first: '$dispatchNarration' },
           priority: { $first: '$priority' },
           lrSent: { $first: '$lrSent' },
           changed: { $first: '$changed' },
@@ -620,6 +627,9 @@ const getAllDeletedOrders = async (req, res) => {
         }
       },
       {
+        $unwind: '$transport'
+      },
+      {
         $unwind: '$party' // Deconstructing the array field 'party' to individual documents
       },
       {
@@ -643,6 +653,7 @@ const getAllDeletedOrders = async (req, res) => {
           party: { $first: '$party' },
           transportId: { $first: '$transportId' },
           transportName: { $first: '$transportName' },
+          eBilling: { $first: '$transport.eBilling' },
           companyName: { $first: '$companyName' },
           orderNumber: { $first: '$orderNumber' },
           orderPast: { $first: '$orderPast' },
@@ -650,6 +661,8 @@ const getAllDeletedOrders = async (req, res) => {
           billed: { $first: '$billed' },
           billNumber: { $first: '$billNumber' },
           dispatched: { $first: '$dispatched' },
+          dispatchBox: { $first: '$dispatchBox' },
+          dispatchNarration: { $first: '$dispatchNarration' },
           priority: { $first: '$priority' },
           lrSent: { $first: '$lrSent' },
           changed: { $first: '$changed' },
@@ -772,6 +785,9 @@ const getOrderById = async (req, res) => {
         }
       },
       {
+        $unwind: '$transport'
+      },
+      {
         $unwind: '$party' // Deconstructing the array field 'party' to individual documents
       },
       {
@@ -823,6 +839,7 @@ const getOrderById = async (req, res) => {
           party: { $first: '$party' },
           transportId: { $first: '$transport.id' },
           transportName: { $first: '$transportName' },
+          eBilling: { $first: '$transport.eBilling' },
           companyName: { $first: '$companyName' },
           orderNumber: { $first: '$orderNumber' },
           orderPast: { $first: '$orderPast' },
@@ -830,6 +847,8 @@ const getOrderById = async (req, res) => {
           billed: { $first: '$billed' },
           billNumber: { $first: '$billNumber' },
           dispatched: { $first: '$dispatched' },
+          dispatchBox: { $first: '$dispatchBox' },
+          dispatchNarration: { $first: '$dispatchNarration' },
           lrSent: { $first: '$lrSent' },
           changed: { $first: '$changed' },
           status: { $first: '$status' },
@@ -908,6 +927,20 @@ const filterOrdersByStatus = async (req, res) => {
       },
       {
         $lookup: {
+          from: 'users', // Name of the collection you're joining with (users collection)
+          localField: 'createdBy', // Field from OrderModel
+          foreignField: 'id', // Field from User model
+          as: 'createdBy'
+        }
+      },
+      {
+        $unwind: '$user' // Deconstructing the array field 'user' to individual documents
+      },
+      {
+        $unwind: '$createdBy' // Deconstructing the array field 'user' to individual documents
+      },
+      {
+        $lookup: {
           from: 'parties',
           localField: 'partyId',
           foreignField: 'id',
@@ -923,29 +956,25 @@ const filterOrdersByStatus = async (req, res) => {
         }
       },
       {
-        $unwind: {
-          path: '$transport',
-          preserveNullAndEmptyArrays: true
-        },
-      },
-      {
         $addFields: {
           transportName: {
             $cond: [
               {
                 $ifNull: ["$transportId", false]
               },
-              "$transport.transportName",
+              {
+                $arrayElemAt: ["$transport.transportName", 0]
+              },
               "$customTransport"
             ]
           }
         }
       },
       {
-        $unwind: '$party' // Deconstructing the array field 'party' to individual documents
+        $unwind: '$transport'
       },
       {
-        $unwind: '$user' // Deconstructing the array field 'user' to individual documents
+        $unwind: '$party' // Deconstructing the array field 'party' to individual documents
       },
       {
         $unwind: '$orders' // Deconstructing the array field 'orders' to individual documents
@@ -966,14 +995,19 @@ const filterOrdersByStatus = async (req, res) => {
           _id: '$_id',
           id: { $first: '$id' },
           party: { $first: '$party' },
-          transportId: { $first: '$transport.id' },
+          transportId: { $first: '$transportId' },
           transportName: { $first: '$transportName' },
+          eBilling: { $first: '$transport.eBilling' },
           companyName: { $first: '$companyName' },
           orderNumber: { $first: '$orderNumber' },
+          orderPast: { $first: '$orderPast' },
           isDeleted: { $first: '$isDeleted' },
           billed: { $first: '$billed' },
           billNumber: { $first: '$billNumber' },
           dispatched: { $first: '$dispatched' },
+          dispatchBox: { $first: '$dispatchBox' },
+          dispatchNarration: { $first: '$dispatchNarration' },
+          priority: { $first: '$priority' },
           lrSent: { $first: '$lrSent' },
           changed: { $first: '$changed' },
           status: { $first: '$status' },
@@ -983,6 +1017,7 @@ const filterOrdersByStatus = async (req, res) => {
           totalPrice: { $first: '$totalPrice' },
           confirmOrder: { $first: '$confirmOrder' },
           narration: { $first: '$narration' },
+          createdBy: { $first: { id: '$createdBy.id', name: '$createdBy.name', nickName: '$createdBy.nickName' } },
           createdAt: { $first: '$createdAt' },
           user: { $first: { id: '$user.id', name: '$user.name', nickName: '$user.nickName' } },
           products: {
@@ -992,7 +1027,8 @@ const filterOrdersByStatus = async (req, res) => {
               productType: '$product.productType',
               quantity: '$orders.quantity',
               sellPrice: '$orders.sellPrice',
-              done: '$orders.done'
+              done: '$orders.done',
+              checked: '$orders.checked'
             }
           }
         }
@@ -1003,7 +1039,10 @@ const filterOrdersByStatus = async (req, res) => {
     ]).skip(skip)
       .limit(limit);
 
-    const totalCount = await OrderModel.find({ status }).count();
+    const totalCount = await OrderModel.find({
+      status,
+      isDeleted: false
+    }).count();
 
     res.json({
       status: true,

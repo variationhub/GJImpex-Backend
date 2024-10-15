@@ -16,6 +16,9 @@ const transportModel = new mongoose.Schema({
     mobileNumber: {
         type: String,
     },
+    secondMobile:{
+        type: String,
+    },
     gst: {
         type: String,
         required: true,
@@ -26,6 +29,14 @@ const transportModel = new mongoose.Schema({
         type: String,
         required: true,
         trim: true
+    },
+    nariation:{
+        type: String,
+        trim: true,
+    },
+    eBilling:{
+        type: Boolean,
+        default: false
     },
     isDeleted:{
         type: Boolean,

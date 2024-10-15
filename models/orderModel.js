@@ -84,6 +84,14 @@ const orderModel = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    dispatchBox:{
+        type: Number
+    },
+    dispatchNarration:{
+        type: String,
+        trim: true,
+        default: ""
+    },
     lrSent: {
         type: Boolean,
         default: false
