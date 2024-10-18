@@ -331,7 +331,7 @@ const updateOrderStatus = async (req, res) => {
     order.billNumber = billNumber;
     order.billed = billed;
     order.dispatched = dispatched;
-    order.dispatchDate = dispatched ? new Date() : null;
+    order.dispatchDate = dispatched ? order?.dispatchDate || new Date() : null;
     order.dispatchBox = dispatchBox;
     order.dispatchNarration = dispatchNarration;
     order.lrSent = lrSent;
