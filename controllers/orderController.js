@@ -1067,7 +1067,6 @@ const filterOrdersByStatus = async (req, res) => {
 // Delete Order
 const deleteOrder = async (req, res) => {
   const { id } = req.params;
-  const userId = req.user.id;
   try {
     const orderData = await OrderModel.findOne({ id });
 
@@ -1087,7 +1086,7 @@ const deleteOrder = async (req, res) => {
       });
     }
 
-    if (orderData.status === "BILLING") {
+    if (orderData.status === "BILLING" && !orderData.isDeleted) {
       if (orderData?.confirmOrder) {
         await Promise.all(orderData.orders.map(async (orderOldData) => {
           const productData = await Product.findOne({ id: orderOldData.productId });
