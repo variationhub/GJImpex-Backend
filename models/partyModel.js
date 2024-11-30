@@ -5,7 +5,7 @@ const partyModel = new mongoose.Schema({
     id: {
         type: String,
         default: uuid,
-        index: true 
+        index: true
     },
     partyName: {
         type: String,
@@ -18,6 +18,11 @@ const partyModel = new mongoose.Schema({
         required: true,
         trim: true,
     },
+    destination: {
+        type: String,
+        default: "",
+        trim: true,
+    },
     mobileNumber: {
         type: String,
         unique: true,
@@ -27,7 +32,7 @@ const partyModel = new mongoose.Schema({
             message: 'Mobile number must be 10 digits.'
         }
     },
-    secondNumber:{
+    secondNumber: {
         type: String,
         trim: true
     },
@@ -46,7 +51,7 @@ const partyModel = new mongoose.Schema({
         required: true,
         ref: 'User'
     },
-    isDeleted:{
+    isDeleted: {
         type: Boolean,
         default: false
     },

@@ -28,7 +28,7 @@ const createOrder = async (req, res) => {
     await Promise.all(orderData.orders.map(async (order, index) => {
 
       const product = productData.find(item => item.id === order.productId);
-      if (product.stock < order.quantity) {
+      if ((product.stock - product?.pendingOrderStock) < order.quantity) {
         throw new Error(`${product.productName} have Only ${product.stock} stock.`);
       } else {
 
@@ -176,7 +176,7 @@ const updateOrder = async (req, res) => {
     await Promise.all(orderData.orders.map(async (order, index) => {
 
       const product = productData.find(item => item.id === order.productId);
-      if (product.stock < order.quantity) {
+      if ((product.stock - product.pendingOrderStock) < order.quantity) {
         throw new Error(`${product.productName} have Only ${product.stock} stock.`);
       } else {
 
@@ -482,7 +482,10 @@ const getAllOrders = async (req, res) => {
         }
       },
       {
-        $unwind: '$transport'
+        $unwind: {
+          path: '$transport',
+          preserveNullAndEmptyArrays: true
+        }
       },
       {
         $unwind: '$party' // Deconstructing the array field 'party' to individual documents
@@ -507,6 +510,7 @@ const getAllOrders = async (req, res) => {
           id: { $first: '$id' },
           party: { $first: '$party' },
           transportId: { $first: '$transportId' },
+          destination: { $first: '$destination' },
           transportName: { $first: '$transportName' },
           eBilling: { $first: '$transport.eBilling' },
           companyName: { $first: '$companyName' },
@@ -612,6 +616,12 @@ const getAllDeletedOrders = async (req, res) => {
         }
       },
       {
+        $unwind: {
+          path: '$transport',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
         $addFields: {
           transportName: {
             $cond: [
@@ -625,9 +635,6 @@ const getAllDeletedOrders = async (req, res) => {
             ]
           }
         }
-      },
-      {
-        $unwind: '$transport'
       },
       {
         $unwind: '$party' // Deconstructing the array field 'party' to individual documents
@@ -652,6 +659,7 @@ const getAllDeletedOrders = async (req, res) => {
           id: { $first: '$id' },
           party: { $first: '$party' },
           transportId: { $first: '$transportId' },
+          destination: { $first: '$destination' },
           transportName: { $first: '$transportName' },
           eBilling: { $first: '$transport.eBilling' },
           companyName: { $first: '$companyName' },
@@ -769,7 +777,7 @@ const getOrderById = async (req, res) => {
         $unwind: {
           path: '$transport',
           preserveNullAndEmptyArrays: true
-        },
+        }
       },
       {
         $addFields: {
@@ -785,7 +793,10 @@ const getOrderById = async (req, res) => {
         }
       },
       {
-        $unwind: '$transport'
+        $unwind: {
+          path: '$transport',
+          preserveNullAndEmptyArrays: true
+        }
       },
       {
         $unwind: '$party' // Deconstructing the array field 'party' to individual documents
@@ -837,6 +848,7 @@ const getOrderById = async (req, res) => {
           _id: '$_id',
           id: { $first: '$id' },
           party: { $first: '$party' },
+          destination: { $first: '$destination' },
           transportId: { $first: '$transport.id' },
           transportName: { $first: '$transportName' },
           eBilling: { $first: '$transport.eBilling' },
@@ -971,7 +983,10 @@ const filterOrdersByStatus = async (req, res) => {
         }
       },
       {
-        $unwind: '$transport'
+        $unwind: {
+          path: '$transport',
+          preserveNullAndEmptyArrays: true
+        }
       },
       {
         $unwind: '$party' // Deconstructing the array field 'party' to individual documents
@@ -996,6 +1011,7 @@ const filterOrdersByStatus = async (req, res) => {
           id: { $first: '$id' },
           party: { $first: '$party' },
           transportId: { $first: '$transportId' },
+          destination: { $first: '$destination' },
           transportName: { $first: '$transportName' },
           eBilling: { $first: '$transport.eBilling' },
           companyName: { $first: '$companyName' },
@@ -1117,6 +1133,7 @@ const deleteOrder = async (req, res) => {
       }
 
       sendMessageOrderController()
+      sendMessageProductController()
 
       return res.json({
         status: true,
