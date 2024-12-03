@@ -1,5 +1,5 @@
 const { OrderModel } = require('../models/orderModel');
-const DeviceModel = require('../models/deviceModel');
+// const DeviceModel = require('../models/deviceModel');
 const Product = require('../models/productModel');
 const Party = require('../models/partyModel');
 const { sendMessage } = require('../websocketHandler');
@@ -81,14 +81,14 @@ const createOrder = async (req, res) => {
           product.pendingOrderStock += order.quantity
         }
 
-        if (!stockBelowMin && product.stock < product.minStock) {
-          const topic = "Stock Alert";
-          const description = `${product.productName} stock is below the minimum stock level`;
-          const devices = await DeviceModel.find({ userId });
-          devices.forEach(device => {
-            scheduleNotification(device?.deviceToken, topic, description, Date.now());
-          });
-        }
+        // if (!stockBelowMin && product.stock < product.minStock) {
+        //   const topic = "Stock Alert";
+        //   const description = `${product.productName} stock is below the minimum stock level`;
+        //   const devices = await DeviceModel.find({ userId });
+        //   devices.forEach(device => {
+        //     scheduleNotification(device?.deviceToken, topic, description, Date.now());
+        //   });
+        // }
 
       }
     }));
@@ -221,23 +221,22 @@ const updateOrder = async (req, res) => {
           throw new Error(`Product with ID ${order.productId} not found.`);
         }
 
-        let stockBelowMin = product.stock < product.minStock;
+        // let stockBelowMin = product.stock < product.minStock;
 
-        if (orderData.confirmOrder) {
-          product.stock -= order.quantity;
-        } else {
-          product.pendingOrderStock += order.quantity
-        }
+        // if (orderData.confirmOrder) {
+        //   product.stock -= order.quantity;
+        // } else {
+        //   product.pendingOrderStock += order.quantity
+        // }
 
-        if (!stockBelowMin && product.stock < product.minStock) {
-          const topic = "Stock Alert";
-          const description = `${product.productName} stock is below the minimum stock level`;
-          const devices = await DeviceModel.find({ userId });
-          devices.forEach(device => {
-            scheduleNotification(device?.deviceToken, topic, description, Date.now());
-          });
-        }
-
+        // if (!stockBelowMin && product.stock < product.minStock) {
+        //   const topic = "Stock Alert";
+        //   const description = `${product.productName} stock is below the minimum stock level`;
+        //   const devices = await DeviceModel.find({ userId });
+        //   devices.forEach(device => {
+        //     scheduleNotification(device?.deviceToken, topic, description, Date.now());
+        //   });
+        // }
       }
     }));
 
