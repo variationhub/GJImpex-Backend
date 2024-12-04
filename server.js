@@ -36,7 +36,6 @@ mongoose.connect(process.env.MONGODB_URL).then((connection) => {
     console.error(err)
 })
 
-
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });

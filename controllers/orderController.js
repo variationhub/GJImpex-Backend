@@ -615,12 +615,6 @@ const getAllDeletedOrders = async (req, res) => {
         }
       },
       {
-        $unwind: {
-          path: '$transport',
-          preserveNullAndEmptyArrays: true
-        }
-      },
-      {
         $addFields: {
           transportName: {
             $cond: [
@@ -633,6 +627,12 @@ const getAllDeletedOrders = async (req, res) => {
               "$customTransport"
             ]
           }
+        }
+      },
+      {
+        $unwind: {
+          path: '$transport',
+          preserveNullAndEmptyArrays: true
         }
       },
       {
@@ -770,12 +770,6 @@ const getOrderById = async (req, res) => {
           localField: 'transportId',
           foreignField: 'id',
           as: 'transport'
-        }
-      },
-      {
-        $unwind: {
-          path: '$transport',
-          preserveNullAndEmptyArrays: true
         }
       },
       {
