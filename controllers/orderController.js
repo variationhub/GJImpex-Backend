@@ -28,8 +28,8 @@ const createOrder = async (req, res) => {
     await Promise.all(orderData.orders.map(async (order, index) => {
 
       const product = productData.find(item => item.id === order.productId);
-      if ((product.stock - Math.abs(product?.pendingOrderStock)) < order.quantity) {
-        throw new Error(`${product.productName} have Only ${product.stock} stock.`);
+      if ((product?.stock - Math.abs(product?.pendingOrderStock)) < order.quantity) {
+        throw new Error(`${product.productName} have Only ${product?.stock - Math.abs(product?.pendingOrderStock)} stock.`);
       } else {
 
         let stock = order.quantity;
@@ -176,8 +176,8 @@ const updateOrder = async (req, res) => {
     await Promise.all(orderData.orders.map(async (order, index) => {
 
       const product = productData.find(item => item.id === order.productId);
-      if ((product.stock - Math.abs(product.pendingOrderStock)) < order.quantity) {
-        throw new Error(`${product.productName} have Only ${product.stock} stock.`);
+      if ((product?.stock - Math.abs(product?.pendingOrderStock)) < order.quantity) {
+        throw new Error(`${product.productName} have Only ${product?.stock - Math.abs(product.pendingOrderStock)} stock.`);
       } else {
 
         let stock = order.quantity;
@@ -223,11 +223,11 @@ const updateOrder = async (req, res) => {
 
         // let stockBelowMin = product.stock < product.minStock;
 
-        // if (orderData.confirmOrder) {
-        //   product.stock -= order.quantity;
-        // } else {
-        //   product.pendingOrderStock += order.quantity
-        // }
+        if (orderData.confirmOrder) {
+          product.stock -= order.quantity;
+        } else {
+          product.pendingOrderStock += order.quantity
+        }
 
         // if (!stockBelowMin && product.stock < product.minStock) {
         //   const topic = "Stock Alert";
