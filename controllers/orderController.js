@@ -28,7 +28,7 @@ const createOrder = async (req, res) => {
     await Promise.all(orderData.orders.map(async (order, index) => {
 
       const product = productData.find(item => item.id === order.productId);
-      if ((product.stock - product?.pendingOrderStock) < order.quantity) {
+      if ((product.stock - Math.abs(product?.pendingOrderStock)) < order.quantity) {
         throw new Error(`${product.productName} have Only ${product.stock} stock.`);
       } else {
 
@@ -73,7 +73,7 @@ const createOrder = async (req, res) => {
           throw new Error(`Product with ID ${order.productId} not found.`);
         }
 
-        let stockBelowMin = product.stock < product.minStock;
+        // let stockBelowMin = product.stock < product.minStock;
 
         if (orderData.confirmOrder) {
           product.stock -= order.quantity;
@@ -176,7 +176,7 @@ const updateOrder = async (req, res) => {
     await Promise.all(orderData.orders.map(async (order, index) => {
 
       const product = productData.find(item => item.id === order.productId);
-      if ((product.stock - product.pendingOrderStock) < order.quantity) {
+      if ((product.stock - Math.abs(product.pendingOrderStock)) < order.quantity) {
         throw new Error(`${product.productName} have Only ${product.stock} stock.`);
       } else {
 
