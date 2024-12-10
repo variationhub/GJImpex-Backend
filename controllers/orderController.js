@@ -6,6 +6,7 @@ const { sendMessage } = require('../websocketHandler');
 const scheduleNotification = require('../services/notificationServices');
 const { createNotification } = require("./notificationController");
 const { sendMessageProductController } = require('./productController');
+const { default: mongoose } = require('mongoose');
 
 function sendMessageOrderController() {
   const message = {
@@ -122,15 +123,164 @@ const createOrder = async (req, res) => {
   }
 };
 
-// Update Order
-const updateOrder = async (req, res) => {
-  try {
+// Update Order not transtion added
+// const updateOrder = async (req, res) => {
+//   try {
 
+//     const { id } = req.params;
+//     const orderData = req.body;
+
+
+//     const existingOrder = await OrderModel.findOne({ id });
+
+//     if (!existingOrder) {
+//       return res.status(200).json({
+//         status: false,
+//         data: null,
+//         message: "Order not found"
+//       });
+//     }
+
+//     if (existingOrder?.status !== "BILLING") {
+//       return res.status(200).json({
+//         status: false,
+//         data: null,
+//         message: "Cannot update an order to a status other than BILLING."
+//       });
+//     }
+
+//     if (existingOrder.confirmOrder) {
+//       await Promise.all(existingOrder.orders.map(async (orderOldData) => {
+//         const productData = await Product.findOne({ id: orderOldData.productId });
+//         if (productData) {
+//           productData.productPriceHistory.forEach(item => {
+//             if (orderOldData.buyPriceHistory.map(a => a.id).includes(item.id)) {
+//               const stock = orderOldData.buyPriceHistory.find(a => a.id === item.id)?.quantity || 0;
+//               item.stock = item.stock + stock;
+//               productData.stock = productData?.stock + stock;
+//             }
+//           });
+//         }
+//         await productData.save();
+//         return;
+//       }));
+//     } else {
+//       await Promise.all(existingOrder.orders.map(async (orderOldData) => {
+//         const productData = await Product.findOne({ id: orderOldData.productId });
+//         productData.pendingOrderStock -= orderOldData.quantity
+//         await productData.save();
+//         return;
+//       }));
+//     }
+
+//     const productData = await Product.find({ id: { $in: orderData.orders.map(item => item.productId) } });
+
+//     await Promise.all(orderData.orders.map(async (order, index) => {
+
+//       const product = productData.find(item => item.id === order.productId);
+//       if (!product) {
+//           throw new Error(`Product with ID ${order.productId} not found.`);
+//         }
+//       if ((product?.stock - Math.abs(product?.pendingOrderStock)) < order.quantity) {
+//         throw new Error(`${product.productName} have Only ${product?.stock - Math.abs(product.pendingOrderStock)} stock.`);
+//       } else {
+//         let stock = order.quantity;
+//         let subTotalPrice = 0;
+//         const orderProductHistory = [];
+//         for (let i = 0; i < product.productPriceHistory.length; i++) {
+//           let item = orderData.confirmOrder ? product.productPriceHistory[i] : JSON.parse(JSON.stringify(product.productPriceHistory[i]));
+//           if (item.stock >= stock && stock !== 0) {
+//             subTotalPrice += stock * item.price;
+//             item.stock -= stock
+//             orderProductHistory.push({
+//               quantity: stock,
+//               buyPrice: item.price,
+//               userId: item.userId,
+//               id: item.id
+//             })
+//             stock = 0;
+//             break;
+//           } else if (item.stock) {
+//             stock -= item.stock;
+//             subTotalPrice += item.stock * item.price
+//             orderProductHistory.push({
+//               quantity: item.stock,
+//               buyPrice: item.price,
+//               userId: item.userId,
+//               id: item.id
+//             })
+//             item.stock = 0;
+//           }
+//         }
+
+//         orderData.orders[index] = {
+//           ...order,
+//           buyPrice: (subTotalPrice / order.quantity).toFixed(2),
+//           buyPriceHistory: orderProductHistory,
+
+//         }
+//         subTotalPrice = 0;
+
+//         // let stockBelowMin = product.stock < product.minStock;
+
+//         if (orderData.confirmOrder) {
+//           product.stock -= order.quantity;
+//         } else {
+//           product.pendingOrderStock += order.quantity
+//         }
+
+//         // if (!stockBelowMin && product.stock < product.minStock) {
+//         //   const topic = "Stock Alert";
+//         //   const description = `${product.productName} stock is below the minimum stock level`;
+//         //   const devices = await DeviceModel.find({ userId });
+//         //   devices.forEach(device => {
+//         //     scheduleNotification(device?.deviceToken, topic, description, Date.now());
+//         //   });
+//         // }
+//       }
+//     }));
+
+//     Object.keys(orderData).forEach(key => {
+//       existingOrder[key] = orderData[key];
+//     });
+
+//     existingOrder.changed = true;
+//     await existingOrder.save()
+
+//     sendMessageOrderController();
+//     sendMessageProductController();
+//     createNotification(
+//       "Order Updated",
+//       `An order has been updated with order number ${existingOrder.orderNumber} by ${existingOrder.companyName}.`
+//     );
+//     await Promise.all(productData.map(async (product) => {
+//       await product.save();
+//     }));
+//     res.json({
+//       status: true,
+//       data: existingOrder,
+//       message: "Order updated successfully"
+//     });
+
+//   } catch (error) {
+//     res.status(200).json({
+//       status: false,
+//       data: null,
+//       message: error.message
+//     });
+//   }
+// };
+
+// Update Order with transtion added
+
+const updateOrder = async (req, res) => {
+  const session = await mongoose.startSession(); // Start a session for the transaction
+  try {
     const { id } = req.params;
     const orderData = req.body;
 
-    const existingOrder = await OrderModel.findOne({ id });
-
+    // Find the existing order
+    const existingOrder = await OrderModel.findOne({ id }).session(session); // Use session for atomicity
     if (!existingOrder) {
       return res.status(200).json({
         status: false,
@@ -147,9 +297,12 @@ const updateOrder = async (req, res) => {
       });
     }
 
+    // Start the transaction
+    session.startTransaction();
+
     if (existingOrder.confirmOrder) {
       await Promise.all(existingOrder.orders.map(async (orderOldData) => {
-        const productData = await Product.findOne({ id: orderOldData.productId });
+        const productData = await Product.findOne({ id: orderOldData.productId }).session(session);
         if (productData) {
           productData.productPriceHistory.forEach(item => {
             if (orderOldData.buyPriceHistory.map(a => a.id).includes(item.id)) {
@@ -158,119 +311,119 @@ const updateOrder = async (req, res) => {
               productData.stock = productData?.stock + stock;
             }
           });
+          await productData.save({ session });
         }
-        await productData.save();
-        return;
       }));
     } else {
       await Promise.all(existingOrder.orders.map(async (orderOldData) => {
-        const productData = await Product.findOne({ id: orderOldData.productId });
-        productData.pendingOrderStock -= orderOldData.quantity
-        await productData.save();
-        return;
+        const productData = await Product.findOne({ id: orderOldData.productId }).session(session);
+        productData.pendingOrderStock -= orderOldData.quantity;
+        await productData.save({ session });
       }));
     }
 
-    const productData = await Product.find({ id: { $in: orderData.orders.map(item => item.productId) } });
+    const productData = await Product.find({ id: { $in: orderData.orders.map(item => item.productId) } }).session(session);
 
     await Promise.all(orderData.orders.map(async (order, index) => {
-
       const product = productData.find(item => item.id === order.productId);
+      if (!product) {
+        throw new Error(`Product with ID ${order.productId} not found.`);
+      }
+
       if ((product?.stock - Math.abs(product?.pendingOrderStock)) < order.quantity) {
         throw new Error(`${product.productName} have Only ${product?.stock - Math.abs(product.pendingOrderStock)} stock.`);
+      }
+
+      let stock = order.quantity;
+      let subTotalPrice = 0;
+      const orderProductHistory = [];
+
+      // Process price history
+      for (let i = 0; i < product.productPriceHistory.length; i++) {
+        let item = orderData.confirmOrder ? product.productPriceHistory[i] : JSON.parse(JSON.stringify(product.productPriceHistory[i]));
+        if (item.stock >= stock && stock !== 0) {
+          subTotalPrice += stock * item.price;
+          item.stock -= stock;
+          orderProductHistory.push({
+            quantity: stock,
+            buyPrice: item.price,
+            userId: item.userId,
+            id: item.id
+          });
+          stock = 0;
+          break;
+        } else if (item.stock) {
+          stock -= item.stock;
+          subTotalPrice += item.stock * item.price;
+          orderProductHistory.push({
+            quantity: item.stock,
+            buyPrice: item.price,
+            userId: item.userId,
+            id: item.id
+          });
+          item.stock = 0;
+        }
+      }
+
+      orderData.orders[index] = {
+        ...order,
+        buyPrice: (subTotalPrice / order.quantity).toFixed(2),
+        buyPriceHistory: orderProductHistory
+      };
+
+      subTotalPrice = 0;
+
+      // Update stock and pending stock based on order confirmation
+      if (orderData.confirmOrder) {
+        product.stock -= order.quantity;
       } else {
-
-        let stock = order.quantity;
-        let subTotalPrice = 0;
-        const orderProductHistory = [];
-        for (let i = 0; i < product.productPriceHistory.length; i++) {
-          let item = orderData.confirmOrder ? product.productPriceHistory[i] : JSON.parse(JSON.stringify(product.productPriceHistory[i]));
-          if (item.stock >= stock && stock !== 0) {
-            subTotalPrice += stock * item.price;
-            item.stock -= stock
-            orderProductHistory.push({
-              quantity: stock,
-              buyPrice: item.price,
-              userId: item.userId,
-              id: item.id
-            })
-            stock = 0;
-            break;
-          } else if (item.stock) {
-            stock -= item.stock;
-            subTotalPrice += item.stock * item.price
-            orderProductHistory.push({
-              quantity: item.stock,
-              buyPrice: item.price,
-              userId: item.userId,
-              id: item.id
-            })
-            item.stock = 0;
-          }
-        }
-
-        orderData.orders[index] = {
-          ...order,
-          buyPrice: (subTotalPrice / order.quantity).toFixed(2),
-          buyPriceHistory: orderProductHistory,
-
-        }
-        subTotalPrice = 0;
-
-        if (!product) {
-          throw new Error(`Product with ID ${order.productId} not found.`);
-        }
-
-        // let stockBelowMin = product.stock < product.minStock;
-
-        if (orderData.confirmOrder) {
-          product.stock -= order.quantity;
-        } else {
-          product.pendingOrderStock += order.quantity
-        }
-
-        // if (!stockBelowMin && product.stock < product.minStock) {
-        //   const topic = "Stock Alert";
-        //   const description = `${product.productName} stock is below the minimum stock level`;
-        //   const devices = await DeviceModel.find({ userId });
-        //   devices.forEach(device => {
-        //     scheduleNotification(device?.deviceToken, topic, description, Date.now());
-        //   });
-        // }
+        product.pendingOrderStock += order.quantity;
       }
     }));
 
+    // Update the order data and save the order
     Object.keys(orderData).forEach(key => {
       existingOrder[key] = orderData[key];
     });
 
     existingOrder.changed = true;
-    await existingOrder.save()
+    await existingOrder.save({ session }); // Save the updated order
 
+    // Send notifications and save the product data
     sendMessageOrderController();
     sendMessageProductController();
     createNotification(
       "Order Updated",
       `An order has been updated with order number ${existingOrder.orderNumber} by ${existingOrder.companyName}.`
     );
+
     await Promise.all(productData.map(async (product) => {
-      await product.save();
+      await product.save({ session }); // Save each product in the session
     }));
+
+    // Commit the transaction if everything is successful
+    await session.commitTransaction();
 
     res.json({
       status: true,
       data: existingOrder,
       message: "Order updated successfully"
     });
-
   } catch (error) {
+    // If an error occurs, abort the transaction and rollback
+    await session.abortTransaction();
+    console.error("Error during transaction:", error);
     res.status(200).json({
       status: false,
       data: null,
       message: error.message
     });
+  } finally {
+    // End the session
+    session.endSession();
   }
 };
+
 
 const updateOrderStatus = async (req, res) => {
   const { id } = req.params;
