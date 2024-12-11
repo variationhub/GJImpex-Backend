@@ -278,27 +278,17 @@ const updateOrder = async (req, res) => {
   try {
     const { id } = req.params;
     const orderData = req.body;
-
-    // Find the existing order
+    // Start the transaction
+    session.startTransaction();
+    
     const existingOrder = await OrderModel.findOne({ id }).session(session); // Use session for atomicity
     if (!existingOrder) {
-      return res.status(200).json({
-        status: false,
-        data: null,
-        message: "Order not found"
-      });
+      throw new Error("Order not found");
     }
 
     if (existingOrder?.status !== "BILLING") {
-      return res.status(200).json({
-        status: false,
-        data: null,
-        message: "Cannot update an order to a status other than BILLING."
-      });
+      throw new Error("Cannot update an order to a status other than BILLING.");
     }
-
-    // Start the transaction
-    session.startTransaction();
 
     if (existingOrder.confirmOrder) {
       await Promise.all(existingOrder.orders.map(async (orderOldData) => {
@@ -388,8 +378,13 @@ const updateOrder = async (req, res) => {
 
     existingOrder.changed = true;
     await existingOrder.save({ session }); // Save the updated order
+    
+    await Promise.all(productData.map(async (product) => {
+      await product.save({ session }); // Save each product in the session
+    }));
 
-    // Send notifications and save the product data
+    await session.commitTransaction();
+
     sendMessageOrderController();
     sendMessageProductController();
     createNotification(
@@ -397,29 +392,20 @@ const updateOrder = async (req, res) => {
       `An order has been updated with order number ${existingOrder.orderNumber} by ${existingOrder.companyName}.`
     );
 
-    await Promise.all(productData.map(async (product) => {
-      await product.save({ session }); // Save each product in the session
-    }));
-
-    // Commit the transaction if everything is successful
-    await session.commitTransaction();
-
-    res.json({
+    return res.json({
       status: true,
       data: existingOrder,
       message: "Order updated successfully"
     });
+
   } catch (error) {
-    // If an error occurs, abort the transaction and rollback
     await session.abortTransaction();
-    console.error("Error during transaction:", error);
     res.status(200).json({
       status: false,
       data: null,
       message: error.message
     });
   } finally {
-    // End the session
     session.endSession();
   }
 };
