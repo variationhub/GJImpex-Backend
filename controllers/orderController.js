@@ -274,14 +274,13 @@ const createOrder = async (req, res) => {
 // Update Order with transtion added
 
 const updateOrder = async (req, res) => {
-  const session = await mongoose.startSession(); // Start a session for the transaction
+  let orderReseting = false;
   try {
     const { id } = req.params;
     const orderData = req.body;
     // Start the transaction
-    session.startTransaction();
-    
-    const existingOrder = await OrderModel.findOne({ id }).session(session); // Use session for atomicity
+
+    const existingOrder = await OrderModel.findOne({ id });
     if (!existingOrder) {
       throw new Error("Order not found");
     }
@@ -292,7 +291,7 @@ const updateOrder = async (req, res) => {
 
     if (existingOrder.confirmOrder) {
       await Promise.all(existingOrder.orders.map(async (orderOldData) => {
-        const productData = await Product.findOne({ id: orderOldData.productId }).session(session);
+        const productData = await Product.findOne({ id: orderOldData.productId });
         if (productData) {
           productData.productPriceHistory.forEach(item => {
             if (orderOldData.buyPriceHistory.map(a => a.id).includes(item.id)) {
@@ -301,18 +300,20 @@ const updateOrder = async (req, res) => {
               productData.stock = productData?.stock + stock;
             }
           });
-          await productData.save({ session });
+          await productData.save();
         }
       }));
     } else {
       await Promise.all(existingOrder.orders.map(async (orderOldData) => {
-        const productData = await Product.findOne({ id: orderOldData.productId }).session(session);
+        const productData = await Product.findOne({ id: orderOldData.productId });
         productData.pendingOrderStock -= orderOldData.quantity;
-        await productData.save({ session });
+        await productData.save();
       }));
     }
 
-    const productData = await Product.find({ id: { $in: orderData.orders.map(item => item.productId) } }).session(session);
+    orderReseting = true
+
+    const productData = await Product.find({ id: { $in: orderData.orders.map(item => item.productId) } })
 
     await Promise.all(orderData.orders.map(async (order, index) => {
       const product = productData.find(item => item.id === order.productId);
@@ -377,13 +378,11 @@ const updateOrder = async (req, res) => {
     });
 
     existingOrder.changed = true;
-    await existingOrder.save({ session }); // Save the updated order
-    
-    await Promise.all(productData.map(async (product) => {
-      await product.save({ session }); // Save each product in the session
-    }));
+    await existingOrder.save(); // Save the updated order
 
-    await session.commitTransaction();
+    await Promise.all(productData.map(async (product) => {
+      await product.save();
+    }));
 
     sendMessageOrderController();
     sendMessageProductController();
@@ -399,14 +398,36 @@ const updateOrder = async (req, res) => {
     });
 
   } catch (error) {
-    await session.abortTransaction();
+    if (orderReseting) {
+      const existingOrder = await OrderModel.findOne({ id: req?.params?.id });
+
+      if (existingOrder?.confirmOrder) {
+        await Promise.all(existingOrder?.orders.map(async (orderOldData) => {
+          const productData = await Product.findOne({ id: orderOldData.productId });
+          if (productData) {
+            productData.productPriceHistory.forEach(item => {
+              if (orderOldData.buyPriceHistory.map(a => a.id).includes(item.id)) {
+                const stock = orderOldData.buyPriceHistory.find(a => a.id === item.id)?.quantity || 0;
+                item.stock = item.stock - stock;
+                productData.stock = productData?.stock - stock;
+              }
+            });
+            await productData.save();
+          }
+        }));
+      } else {
+        await Promise.all(existingOrder.orders.map(async (orderOldData) => {
+          const productData = await Product.findOne({ id: orderOldData.productId });
+          productData.pendingOrderStock += orderOldData.quantity;
+          await productData.save();
+        }));
+      }
+    }
     res.status(200).json({
       status: false,
       data: null,
       message: error.message
     });
-  } finally {
-    session.endSession();
   }
 };
 
