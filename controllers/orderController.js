@@ -1074,13 +1074,20 @@ const filterOrdersByStatus = async (req, res) => {
   try {
     const { status } = req.params;
     const { page, limit, skip } = req.pagination;
+    const { from, to } = req.query
+    
+    
+    let query = { status, isDeleted: false }
+    if (from && to && from !== 'null' && to !== 'null') {
+      const fromDate = new Date(from); // YYYY-MM-DD
+      const toDate = new Date(to); // YYYY-MM-DD
+      toDate.setDate(toDate.getDate() + 1);
+      query = { ...query, createdAt: { $gte: fromDate, $lte: toDate } }
+    }
 
     const order = await OrderModel.aggregate([
       {
-        $match: {
-          status,
-          isDeleted: false
-        }
+        $match: query
       },
       {
         $lookup: {
@@ -1209,8 +1216,7 @@ const filterOrdersByStatus = async (req, res) => {
       .limit(limit);
 
     const totalCount = await OrderModel.find({
-      status,
-      isDeleted: false
+      ...query
     }).count();
 
     res.json({
