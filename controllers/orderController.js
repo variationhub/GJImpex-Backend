@@ -464,6 +464,7 @@ const updateOrderStatus = async (req, res) => {
       order.dispatchDate = null;
       order.dispatchBox = 0
       order.dispatchNarration = "";
+      order.orderPast = false;
 
       order.status = "BILLING";
       await order.save();
@@ -494,6 +495,7 @@ const updateOrderStatus = async (req, res) => {
     order.dispatchBox = dispatchBox;
     order.dispatchNarration = dispatchNarration;
     order.lrSent = lrSent;
+    order.orderPast = false;
 
     let newStatus = "BILLING";
 
