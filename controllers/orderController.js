@@ -7,6 +7,7 @@ const scheduleNotification = require('../services/notificationServices');
 const { createNotification } = require("./notificationController");
 const { sendMessageProductController } = require('./productController');
 const { default: mongoose } = require('mongoose');
+const counterModel = require('../models/counterModel');
 
 function sendMessageOrderController() {
   const message = {
@@ -16,6 +17,35 @@ function sendMessageOrderController() {
   sendMessage(message)
 }
 
+async function generateOrderNumber() {
+  const result = await counterModel.findOneAndUpdate(
+      { key: 'orderNumber' },
+      [
+          {
+              $set: {
+                  value: {
+                      $cond: [
+                          { $gte: ['$value', 9999] },
+                          1,
+                          { $add: ['$value', 1] }
+                      ]
+                  }
+              }
+          }
+      ],
+      { 
+          new: true
+      }
+  );
+
+  if (!result) {
+      const newCounter = await counterModel.create({ key: 'orderNumber', value: 1 });
+      return newCounter.value;
+  }
+
+  return result.value;
+}
+
 const createOrder = async (req, res) => {
 
   try {
@@ -23,8 +53,7 @@ const createOrder = async (req, res) => {
     const createdBy = req.user?.id;
     const productData = await Product.find({ id: { $in: orderData.orders.map(item => item.productId) } });
     const { userId } = await Party.findOne({ id: orderData.partyId }, { userId: 1 });
-    let lastOrder = await OrderModel.findOne().sort({ createdAt: -1 });
-    let orderNumber = ((lastOrder && lastOrder.orderNumber ? lastOrder.orderNumber : 0) % 9999) + 1;
+    let orderNumber = await generateOrderNumber();
 
     await Promise.all(orderData.orders.map(async (order, index) => {
 
