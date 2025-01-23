@@ -19,28 +19,28 @@ function sendMessageOrderController() {
 
 async function generateOrderNumber() {
   const result = await counterModel.findOneAndUpdate(
-      { key: 'orderNumber' },
-      [
-          {
-              $set: {
-                  value: {
-                      $cond: [
-                          { $gte: ['$value', 9999] },
-                          1,
-                          { $add: ['$value', 1] }
-                      ]
-                  }
-              }
+    { key: 'orderNumber' },
+    [
+      {
+        $set: {
+          value: {
+            $cond: [
+              { $gte: ['$value', 9999] },
+              1,
+              { $add: ['$value', 1] }
+            ]
           }
-      ],
-      { 
-          new: true
+        }
       }
+    ],
+    {
+      new: true
+    }
   );
 
   if (!result) {
-      const newCounter = await counterModel.create({ key: 'orderNumber', value: 1 });
-      return newCounter.value;
+    const newCounter = await counterModel.create({ key: 'orderNumber', value: 1 });
+    return newCounter.value;
   }
 
   return result.value;
@@ -53,7 +53,7 @@ const createOrder = async (req, res) => {
     const createdBy = req.user?.id;
     const productData = await Product.find({ id: { $in: orderData.orders.map(item => item.productId) } });
     const { userId } = await Party.findOne({ id: orderData.partyId }, { userId: 1 });
-    let orderNumber = await generateOrderNumber();
+    let orderNumber = null;
 
     await Promise.all(orderData.orders.map(async (order, index) => {
 
@@ -107,6 +107,7 @@ const createOrder = async (req, res) => {
 
         if (orderData.confirmOrder) {
           product.stock -= order.quantity;
+          orderNumber = await generateOrderNumber();
         } else {
           product.pendingOrderStock += order.quantity
         }
@@ -396,6 +397,9 @@ const updateOrder = async (req, res) => {
       // Update stock and pending stock based on order confirmation
       if (orderData.confirmOrder) {
         product.stock -= order.quantity;
+        if (!existingOrder.orderNumber) {
+          existingOrder.orderNumber = await generateOrderNumber();
+        }
       } else {
         product.pendingOrderStock += order.quantity;
       }
@@ -1106,8 +1110,8 @@ const filterOrdersByStatus = async (req, res) => {
     const { status } = req.params;
     const { page, limit, skip } = req.pagination;
     const { from, to } = req.query
-    
-    
+
+
     let query = { status, isDeleted: false }
     if (from && to && from !== 'null' && to !== 'null') {
       const fromDate = new Date(from); // YYYY-MM-DD
@@ -1358,6 +1362,61 @@ const deleteOrder = async (req, res) => {
   }
 };
 
+const getPendingOrderDetails = async (req, res) => {
+  try {
+
+    const { id } = req.params;
+    const orderData = await OrderModel.aggregate([
+      {
+        $match: {
+          confirmOrder: false,
+          isDeleted: false
+        }
+      },
+      {
+        $unwind: "$orders"
+      },
+      {
+        $match: {
+          "orders.productId": id
+        }
+      },
+      {
+        $lookup: {
+          from: "parties",
+          localField: "partyId",
+          foreignField: "id",
+          as: "partyDetails"
+        }
+      },
+      {
+        $unwind: "$partyDetails"
+      },
+      {
+        $project: {
+          orderNumber: 1,
+          quantity: "$orders.quantity",
+          partyName: "$partyDetails.partyName"
+        }
+      }
+    ]);
+
+    return res.json({
+      status: true,
+      data: orderData,
+      message: "Pending order details fetched successfully"
+    })
+
+
+  } catch (error) {
+    return res.status(200).json({
+      status: false,
+      data: null,
+      message: error.message
+    });
+  }
+}
+
 module.exports = { deleteOrder };
 
 
@@ -1370,5 +1429,6 @@ module.exports = {
   deleteOrder,
   updateOrderStatus,
   updateOrderDetails,
-  getAllDeletedOrders
+  getAllDeletedOrders,
+  getPendingOrderDetails
 };

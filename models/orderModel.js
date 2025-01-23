@@ -149,7 +149,6 @@ const orderModel = new mongoose.Schema({
     },
     orderNumber:{
         type: Number,
-        default: ""
     },
     orderPast:{
         type: Boolean,
