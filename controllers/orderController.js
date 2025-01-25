@@ -1394,7 +1394,6 @@ const getPendingOrderDetails = async (req, res) => {
       },
       {
         $project: {
-          orderNumber: 1,
           quantity: "$orders.quantity",
           partyName: "$partyDetails.partyName"
         }
