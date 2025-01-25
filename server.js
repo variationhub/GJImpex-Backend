@@ -1,63 +1,89 @@
-const express = require("express");
-const mongoose = require("mongoose");
-const cors = require('cors');
-require("dotenv").config();
-const morgan = require('morgan');
-const loginRoute = require("./routes/loginRoute")
-const userRoute = require("./routes/userRoute")
-const transportRoute = require("./routes/transportRoute")
-const productRoute = require("./routes/productRoute")
-const taskRoute = require("./routes/taskRoute")
-const conversationRoute = require("./routes/conversationRoute")
-const partyRoute = require("./routes/partyRoute.js")
-const orderRoute = require("./routes/orderRoute");
-const overviewRoute = require("./routes/overviewRoute");
-const notificationRoute = require("./routes/notificationRoute");
-const WebSocket = require('ws');
-const { handleConnection, sendMessage } = require('./websocketHandler');
-const admin = require("firebase-admin");
-const serviceAccount = require("./gj-impex.json");
-const cron = require('./services/cronJob.js')
+const cluster = require("cluster");
+const os = require("os");
 
-const wss = new WebSocket.Server({ port: 8080 });
+if (cluster.isMaster) {
+    const numCPUs = os.cpus().length;
 
-wss.on('connection', handleConnection);
+    console.log(`Master ${process.pid} is running`);
+    console.log(`Forking server for ${numCPUs} CPUs...`);
 
-const PORT = process.env.PORT || 8000;
-const app = express();
+    // Fork workers for each CPU
+    for (let i = 0; i < numCPUs; i++) {
+        cluster.fork();
+    }
 
-app.use(cors());
-app.use(morgan('tiny'));
-app.use(express.json());
+    // Listen for dying workers and respawn if necessary
+    cluster.on("exit", (worker, code, signal) => {
+        console.log(`Worker ${worker.process.pid} died. Spawning a new one...`);
+        cluster.fork();
+    });
+} else {
+    const express = require("express");
+    const mongoose = require("mongoose");
+    const cors = require("cors");
+    require("dotenv").config();
+    const morgan = require("morgan");
+    const loginRoute = require("./routes/loginRoute");
+    const userRoute = require("./routes/userRoute");
+    const transportRoute = require("./routes/transportRoute");
+    const productRoute = require("./routes/productRoute");
+    const taskRoute = require("./routes/taskRoute");
+    const conversationRoute = require("./routes/conversationRoute");
+    const partyRoute = require("./routes/partyRoute.js");
+    const orderRoute = require("./routes/orderRoute");
+    const overviewRoute = require("./routes/overviewRoute");
+    const notificationRoute = require("./routes/notificationRoute");
+    const WebSocket = require("ws");
+    const { handleConnection, sendMessage } = require("./websocketHandler");
+    const admin = require("firebase-admin");
+    const serviceAccount = require("./gj-impex.json");
+    const cron = require("./services/cronJob.js");
 
-mongoose.connect(process.env.MONGODB_URL).then((connection) => {
-    console.log("DB connected");
-}).catch((err) => {
-    console.error(err)
-})
+    const PORT = process.env.PORT || 8000;
+    const app = express();
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
+    app.use(cors());
+    app.use(morgan("tiny"));
+    app.use(express.json());
 
-cron.start();
+    mongoose
+        .connect(process.env.MONGODB_URL)
+        .then(() => {
+            console.log("DB connected");
+        })
+        .catch((err) => {
+            console.error(err);
+        });
 
-app.get('/', (req, res) => {
-    res.send("Server is running")
-});
-app.use('/api/login', loginRoute);
-app.use('/api/users', userRoute);
-app.use('/api/transports', transportRoute);
-app.use('/api/products', productRoute);
-app.use('/api/tasks', taskRoute);
-app.use('/api/conversations', conversationRoute);
-app.use('/api/party', partyRoute);
-app.use('/api/orders', orderRoute);
-app.use('/api/overview', overviewRoute);
-app.use('/api/notification', notificationRoute);
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+    });
 
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-});
+    cron.start();
 
-module.exports.sendMessage = sendMessage;
+    app.get("/", (req, res) => {
+        res.send("Server is running");
+    });
+
+    app.use("/api/login", loginRoute);
+    app.use("/api/users", userRoute);
+    app.use("/api/transports", transportRoute);
+    app.use("/api/products", productRoute);
+    app.use("/api/tasks", taskRoute);
+    app.use("/api/conversations", conversationRoute);
+    app.use("/api/party", partyRoute);
+    app.use("/api/orders", orderRoute);
+    app.use("/api/overview", overviewRoute);
+    app.use("/api/notification", notificationRoute);
+
+    // WebSocket server
+    const wss = new WebSocket.Server({ port: 8080 });
+
+    wss.on("connection", handleConnection);
+
+    app.listen(PORT, () => {
+        console.log(`Worker ${process.pid} is running on http://localhost:${PORT}`);
+    });
+
+    module.exports.sendMessage = sendMessage;
+}
