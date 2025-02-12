@@ -165,6 +165,7 @@ const getDailyReport = async (req, res) => {
             },
             {
                 $sort:{
+                    dispatchDate: 1,
                     orderNumber: 1,
                 }
             }
