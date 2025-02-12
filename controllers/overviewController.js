@@ -1,16 +1,15 @@
 const { OrderModel } = require("../models/orderModel");
 
 const getProfit = async (req, res) => {
-
     try {
-        const { from, to } = req.query
-        const fromDate = new Date(from); // YYYY-MM-DD
-        const toDate = new Date(to); // YYYY-MM-DD
+        const { from, to } = req.query;
+        const fromDate = new Date(from);
+        const toDate = new Date(to);
         toDate.setDate(toDate.getDate() + 1);
 
-        let query = { status: { $in: ["DONE", "LR PENDING"] } }
+        let query = { status: { $in: ["DONE", "LR PENDING"] } };
         if (from && to) {
-            query = { ...query, dispatchDate: { $gte: fromDate, $lte: toDate } }
+            query = { ...query, dispatchDate: { $gte: fromDate, $lte: toDate } };
         }
 
         const overviewWithProfitMetrics = await OrderModel.aggregate([
@@ -49,29 +48,38 @@ const getProfit = async (req, res) => {
                     nickname: { $first: '$user.nickName' },
                     mobileNumber: { $first: '$user.mobileNumber' },
                     totalSelling: {
-                        $sum: { $multiply: ['$orders.quantity', '$orders.sellPrice'] } // Calculate total selling price
+                        $sum: { $multiply: ['$orders.quantity', '$orders.sellPrice'] }
                     },
                     totalBuying: {
-                        $sum: { $multiply: ['$orders.quantity', '$orders.buyPrice'] } // Calculate total buying price
+                        $sum: { $multiply: ['$orders.quantity', '$orders.buyPrice'] }
                     },
                     orderDetails: {
                         $push: {
-                            $mergeObjects: [
-                                '$orders',
-                                { gstPrice: '$gstPrice' },
-                                { orderId: '$id' },
-                                { orderNumber: '$orderNumber' },
-                                { createDate: '$dispatchDate' },
-                                { productName: '$product.productName' } // Include product name
-                            ]
+                            orderNumber: '$orderNumber',
+                            dispatchDate: '$dispatchDate',
+                            quantity: '$orders.quantity',
+                            sellPrice: '$orders.sellPrice',
+                            buyPrice: '$orders.buyPrice',
+                            gstPrice: '$gstPrice',
+                            orderId: '$id',
+                            createDate: '$dispatchDate',
+                            productName: '$product.productName'
                         }
                     }
                 }
             },
             {
-                $sort: {
-                    username: 1
+                $addFields: {
+                    orderDetails: {
+                        $sortArray: {
+                            input: "$orderDetails",
+                            sortBy: { orderNumber: 1, dispatchDate: 1 } // Sort orderDetails by orderNumber and dispatchDate
+                        }
+                    }
                 }
+            },
+            {
+                $sort: { username: 1 }
             }
         ]);
 
@@ -88,7 +96,8 @@ const getProfit = async (req, res) => {
             message: error.message
         });
     }
-}
+};
+
 
 const getDailyReport = async (req, res) => {
     try {
