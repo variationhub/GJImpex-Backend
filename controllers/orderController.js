@@ -397,13 +397,14 @@ const updateOrder = async (req, res) => {
       // Update stock and pending stock based on order confirmation
       if (orderData.confirmOrder) {
         product.stock -= order.quantity;
-        if (!existingOrder.orderNumber) {
-          existingOrder.orderNumber = await generateOrderNumber();
-        }
       } else {
         product.pendingOrderStock += order.quantity;
       }
     }));
+
+    if (!existingOrder.orderNumber) {
+      existingOrder.orderNumber = await generateOrderNumber();
+    }
 
     // Update the order data and save the order
     Object.keys(orderData).forEach(key => {
