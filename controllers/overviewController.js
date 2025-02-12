@@ -73,7 +73,7 @@ const getProfit = async (req, res) => {
                     orderDetails: {
                         $sortArray: {
                             input: "$orderDetails",
-                            sortBy: { orderNumber: 1, dispatchDate: 1 } // Sort orderDetails by orderNumber and dispatchDate
+                            sortBy: { dispatchDate: 1, orderNumber: 1, } // Sort orderDetails by orderNumber and dispatchDate
                         }
                     }
                 }
