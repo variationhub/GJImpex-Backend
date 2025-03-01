@@ -121,6 +121,17 @@ const getAllParty = async (req, res) => {
                 }
             },
             {
+                $addFields: {
+                    transport: {
+                        $filter: {
+                            input: "$transport",
+                            as: "t",
+                            cond: { $eq: ["$$t.isDeleted", false] } // Keep only transports where isDeleted is false
+                        }
+                    }
+                }
+            },
+            {
                 $project: {
                     _id: 0,
                     createdAt: 0,

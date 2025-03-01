@@ -1,12 +1,14 @@
 const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
-	host: "live.smtp.mailtrap.io",
-	port: 587,
+	service: "Gmail",
+	host: "smtp.gmail.com",
+	port: 465,
+	secure: true,
 	auth: {
-		user: "api",
-		pass: "b8c3571b2e58a51a9ddfc53c768cf1ae"
-	}
+		user: "gjimpex2013@gmail.com",
+		pass: "ddeb eyml jkgv kyxv",
+	},
 });
 
 async function emailHelper(reciverEmail, password) {

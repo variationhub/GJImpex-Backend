@@ -1,3 +1,4 @@
+const partyModel = require("../models/partyModel");
 const Transport = require("../models/transportModel");
 const { sendMessage } = require("../websocketHandler");
 const { createNotification } = require("./notificationController");
@@ -82,6 +83,13 @@ const updateTransport = async (req, res) => {
 
     await existingTransport.save();
 
+    const updateResult = await partyModel.updateMany(
+      { "transport.id": id },
+      { $set: { "transport.$[elem].transportName": updateData.transportName } },
+      { arrayFilters: [{ "elem.id": id }] }
+    );
+
+
     createNotification(
       "Transport Updated",
       `Transport with name "${existingTransport.transportName}" has been updated.`
@@ -103,7 +111,7 @@ const updateTransport = async (req, res) => {
 
 const getAllTransport = async (req, res) => {
   try {
-    const data = await Transport.find({isDeleted: false}, { _id: 0, createdAt: 0, updatedAt: 0 }).sort({ 'transportName': 1 });
+    const data = await Transport.find({ isDeleted: false }, { _id: 0, createdAt: 0, updatedAt: 0 }).sort({ 'transportName': 1 });
     res.json({
       status: true,
       data: data,
@@ -147,6 +155,11 @@ const deleteTransport = async (req, res) => {
         message: "Transport not found"
       });
     }
+
+    const updateResult = await partyModel.updateMany(
+      { "transport.id": id },
+      { $set: { "transport.$.isDeleted": true } }
+    );
 
     data.isDeleted = true;
     await data.save();
