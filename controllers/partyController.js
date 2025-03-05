@@ -102,9 +102,7 @@ const getAllParty = async (req, res) => {
         // const data = await Party.find({}, { "_id": 0, "createdAt": 0, "updatedAt": 0 }).sort({ "partyName": 1 });
         const data = await Party.aggregate([
             {
-                $match:{
-                    isDeleted: false
-                }
+                $match: { isDeleted: false }  // Fetch only non-deleted parties
             },
             {
                 $lookup: {
@@ -120,17 +118,25 @@ const getAllParty = async (req, res) => {
                     preserveNullAndEmptyArrays: true
                 }
             },
-            // {
-            //     $addFields: {
-            //         transport: {
-            //             $filter: {
-            //                 input: "$transport",
-            //                 as: "t",
-            //                 cond: { $eq: ["$$t.isDeleted", false] } // Keep only transports where isDeleted is false
-            //             }
-            //         }
-            //     }
-            // },
+            {
+                $lookup: {
+                    from: 'transports',  // The collection name in MongoDB for Transport
+                    localField: 'transport.id',  // Match Party transport IDs
+                    foreignField: 'id',  // Match with Transport collection IDs
+                    as: 'transportDetails'
+                }
+            },
+            {
+                $addFields: {
+                    transport: {
+                        $filter: {
+                            input: '$transportDetails',
+                            as: 't',
+                            cond: { $eq: ['$$t.isDeleted', false] }  // Keep only non-deleted transports
+                        }
+                    }
+                }
+            },
             {
                 $project: {
                     _id: 0,
@@ -142,14 +148,26 @@ const getAllParty = async (req, res) => {
                     'userDetails.password': 0,
                     'userDetails.role': 0,
                     'userDetails.email': 0,
-                    'userDetails.mobileNumber': 0
+                    'userDetails.mobileNumber': 0,
+                    'transportDetails': 0,
+                    'transport.mobileNumber': 0,
+                    'transport.secondMobile': 0,
+                    'transport.gst': 0,
+                    'transport.address': 0,
+                    'transport.nariation': 0,
+                    'transport.eBilling': 0,
+                    'transport.isDeleted': 0,
+                    'transport.createdAt': 0,
+                    'transport.updatedAt': 0
                 }
             },
             {
                 $sort: { partyName: 1 }  // Sort by partyName
             }
-        ]); 
-        
+        ]);
+
+
+
         return res.json({
             status: true,
             data: data,
