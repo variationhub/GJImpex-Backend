@@ -11,7 +11,8 @@ const {
     updateOrderStatus,
     updateOrderDetails,
     getAllDeletedOrders,
-    getPendingOrderDetails
+    getPendingOrderDetails,
+    getAllOrdersPending
 } = require('../controllers/orderController');
 const paginationMiddleware = require('../middleware/paginationMiddleware');
 
@@ -22,6 +23,7 @@ router.get('/:id', getOrderById);
 router.get('/filter/:status', paginationMiddleware, filterOrdersByStatus);
 router.get('/deleted/all', paginationMiddleware, getAllDeletedOrders)
 router.get('/pending-order/:id', getPendingOrderDetails)
+router.get('/all/pending-order', getAllOrdersPending)
 router.post('/', createOrder);
 router.put('/:id', updateOrder);
 router.put('/:id/status', updateOrderStatus);

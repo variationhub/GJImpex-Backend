@@ -616,6 +616,156 @@ const getAllOrders = async (req, res) => {
   }
 };
 
+const getAllOrdersPending = async (req, res) => {
+  try {
+    const orders = await OrderModel.aggregate([
+      {
+        $match: {
+          status: { $ne: 'DONE' },
+          confirmOrder: false,
+          isDeleted: { $ne: true },
+        }
+      },
+      {
+        $lookup: {
+          from: 'users', // Name of the collection you're joining with (users collection)
+          localField: 'userId', // Field from OrderModel
+          foreignField: 'id', // Field from User model
+          as: 'user'
+        }
+      },
+      {
+        $lookup: {
+          from: 'users', // Name of the collection you're joining with (users collection)
+          localField: 'createdBy', // Field from OrderModel
+          foreignField: 'id', // Field from User model
+          as: 'createdBy'
+        }
+      },
+      {
+        $unwind: '$user' // Deconstructing the array field 'user' to individual documents
+      },
+      {
+        $unwind: '$createdBy' // Deconstructing the array field 'user' to individual documents
+      },
+      {
+        $lookup: {
+          from: 'parties',
+          localField: 'partyId',
+          foreignField: 'id',
+          as: 'party'
+        }
+      },
+      {
+        $lookup: {
+          from: 'transports',
+          localField: 'transportId',
+          foreignField: 'id',
+          as: 'transport'
+        }
+      },
+      {
+        $addFields: {
+          transportName: {
+            $cond: [
+              {
+                $ifNull: ["$transportId", false]
+              },
+              {
+                $arrayElemAt: ["$transport.transportName", 0]
+              },
+              "$customTransport"
+            ]
+          },
+        }
+      },
+      {
+        $unwind: {
+          path: '$transport',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $unwind: '$party' // Deconstructing the array field 'party' to individual documents
+      },
+      {
+        $unwind: '$orders' // Deconstructing the array field 'orders' to individual documents
+      },
+      {
+        $lookup: {
+          from: 'products', // Name of the collection you're joining with (products collection)
+          localField: 'orders.productId', // Field from OrderModel
+          foreignField: 'id', // Field from Product model
+          as: 'product'
+        }
+      },
+      {
+        $unwind: '$product' // Deconstructing the array field 'product' to individual documents
+      },
+      {
+        $group: {
+          _id: '$_id',
+          id: { $first: '$id' },
+          party: { $first: '$party' },
+          transportId: { $first: '$transportId' },
+          destination: { $first: '$destination' },
+          transportName: { $first: '$transportName' },
+          eBilling: { $first: '$transport.eBilling' },
+          companyName: { $first: '$companyName' },
+          orderNumber: { $first: '$orderNumber' },
+          orderPast: { $first: '$orderPast' },
+          isDeleted: { $first: '$isDeleted' },
+          billed: { $first: '$billed' },
+          billNumber: { $first: '$billNumber' },
+          dispatched: { $first: '$dispatched' },
+          dispatchBox: { $first: '$dispatchBox' },
+          dispatchNarration: { $first: '$dispatchNarration' },
+          priority: { $first: '$priority' },
+          lrSent: { $first: '$lrSent' },
+          changed: { $first: '$changed' },
+          status: { $first: '$status' },
+          freight: { $first: '$freight' },
+          gst: { $first: '$gst' },
+          gstPrice: { $first: '$gstPrice' },
+          totalPrice: { $first: '$totalPrice' },
+          confirmOrder: { $first: '$confirmOrder' },
+          narration: { $first: '$narration' },
+          createdBy: { $first: { id: '$createdBy.id', name: '$createdBy.name', nickName: '$createdBy.nickName' } },
+          createdAt: { $first: '$createdAt' },
+          user: { $first: { id: '$user.id', name: '$user.name', nickName: '$user.nickName' } },
+          products: {
+            $push: {
+              id: '$product.id',
+              productName: '$product.productName',
+              productType: '$product.productType',
+              quantity: '$orders.quantity',
+              sellPrice: '$orders.sellPrice',
+              done: '$orders.done',
+              checked: '$orders.checked',
+              buyPrice: '$orders.buyPrice',
+            }
+          }
+        }
+      },
+      {
+        $sort: { createdAt: -1 }
+      }
+    ]);
+
+    res.json({
+      status: true,
+      data: orders,
+      message: "Order details retrieved successfully"
+    });
+  } catch (error) {
+    res.status(200).json({
+      status: false,
+      data: null,
+      message: error.message
+    });
+  }
+};
+
 const getAllDeletedOrders = async (req, res) => {
   try {
     const { page, limit, skip } = req.pagination;
@@ -1284,5 +1434,6 @@ module.exports = {
   updateOrderStatus,
   updateOrderDetails,
   getAllDeletedOrders,
-  getPendingOrderDetails
+  getPendingOrderDetails,
+  getAllOrdersPending
 };

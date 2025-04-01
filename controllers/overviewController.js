@@ -164,6 +164,7 @@ const getDailyReport = async (req, res) => {
                     nickName: { $first: "$user.nickName" },
                     orderNumber: { $first: "$orderNumber" },
                     dispatchDate: { $first: "$dispatchDate" },
+                    narration: { $first: "$narration"},
                     orders: {
                         $push: {
                             productName: "$product.productName",
@@ -175,8 +176,8 @@ const getDailyReport = async (req, res) => {
             },
             {
                 $sort: {
-                    dispatchDate: 1,
                     orderNumber: 1,
+                    dispatchDate: 1,
                 }
             }
         ]);
